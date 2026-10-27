@@ -1,0 +1,157 @@
+/**
+ * Cross-language links. `from` is the entry that carries the relation
+ * (the borrower, the cognate, the equivalent); `to` is its counterpart.
+ */
+import { ref, type SeedRelation } from "../types"
+
+const sux = (h: string, extra?: Parameters<typeof ref>[2]) => ref("sux", h, extra)
+const akk = (h: string, extra?: Parameters<typeof ref>[2]) => ref("akk", h, extra)
+const grc = (h: string, extra?: Parameters<typeof ref>[2]) => ref("grc", h, extra)
+const hbo = (h: string, extra?: Parameters<typeof ref>[2]) => ref("hbo", h, extra)
+
+const loans: SeedRelation[] = [
+  { from: akk("ekallu"), to: sux("e₂-gal"), type: "loan_from", confidence: "certain", note: "Sumerian “big house” → Akkadian ekallum." },
+  { from: hbo("הֵיכָל"), to: akk("ekallu"), type: "loan_from", confidence: "certain", note: "Via Akkadian; also Aramaic hêḵlā, Arabic haykal." },
+  { from: akk("ṭuppu"), to: sux("dub"), type: "loan_from", confidence: "certain" },
+  { from: akk("ṭupšarru"), to: sux("dub-sar"), type: "loan_from", confidence: "certain" },
+  { from: akk("apsû"), to: sux("abzu"), type: "loan_from", confidence: "certain" },
+  { from: akk("qanû"), to: sux("gi"), type: "loan_from", confidence: "likely", note: "Often cited as a Sumerian loan; a common Semitic word for ‘reed’ is also possible." },
+  { from: grc("κάννα"), to: akk("qanû"), type: "loan_from", confidence: "likely", note: "Through a West Semitic intermediary (Hebrew/Phoenician qāneh)." },
+  { from: grc("μνᾶ"), to: akk("manû"), type: "loan_from", confidence: "likely", note: "Through Phoenician/Aramaic." },
+  { from: grc("σάκκος"), to: hbo("שַׂק"), type: "loan_from", confidence: "likely", note: "West Semitic (Phoenician) loan; cf. Akkadian saqqu." },
+  { from: hbo("כִּסֵּא"), to: akk("kussû"), type: "loan_from", confidence: "likely" },
+  { from: sux("gu-za"), to: akk("kussû"), type: "loan_from", confidence: "debated", note: "Direction of borrowing between Sumerian gu-za and Akkadian kussûm is disputed; a third-language source has been proposed." },
+  { from: sux("ma-na"), to: akk("manû"), type: "loan_from", confidence: "likely", note: "Semitic root m-n-y ‘to count’." },
+  { from: akk("Dumuzi"), to: sux("Dumu-zid"), type: "loan_from", confidence: "certain" },
+  { from: hbo("תַּמּוּז"), to: akk("Dumuzi"), type: "loan_from", confidence: "certain", note: "Ezekiel 8:14; the month name Tammuz comes from Akkadian Duʾūzu." },
+]
+
+const cognates: SeedRelation[] = [
+  { from: hbo("אֵל"), to: akk("ilu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("שָׁלוֹם"), to: akk("šulmu"), type: "cognate_of", confidence: "certain", note: "Common Semitic root š-l-m." },
+  { from: hbo("מֶלֶךְ"), to: akk("malku"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("בַּעַל"), to: akk("bēlu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("בַּיִת"), to: akk("bītu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("שָׁמַיִם"), to: akk("šamû"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("אֶרֶץ"), to: akk("erṣetu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("מַיִם"), to: akk("mû"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("אָב"), to: akk("abu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("אֵם"), to: akk("ummu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("אָח"), to: akk("aḫu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("אִשָּׁה"), to: akk("aššatu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("רֹאשׁ"), to: akk("rēšu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("לֵב"), to: akk("libbu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("עַיִן"), to: akk("īnu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("פֶּה"), to: akk("pû"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("שֵׁם"), to: akk("šumu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("יוֹם"), to: akk("ūmu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("שָׁנָה"), to: akk("šattu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("שֶׁמֶשׁ"), to: akk("šamšu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("יֶרַח"), to: akk("warḫu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("נֶפֶשׁ"), to: akk("napištu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("קָנֶה"), to: akk("qanû"), type: "cognate_of", confidence: "likely" },
+  { from: hbo("מָנֶה"), to: akk("manû"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("שַׂק"), to: akk("saqqu"), type: "cognate_of", confidence: "likely" },
+  { from: hbo("כֶּסֶף"), to: akk("kaspu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("שֵׁכָר"), to: akk("šikaru"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("חֲמוֹר"), to: akk("imēru"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("כֶּלֶב"), to: akk("kalbu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("נָתַן"), to: akk("nadānu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("הָלַךְ"), to: akk("alāku"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("אָכַל"), to: akk("akalu"), type: "cognate_of", confidence: "likely", note: "Hebrew verb ‘to eat’ ~ Akkadian noun ‘bread’ (verb akālu)." },
+  { from: hbo("רַב"), to: akk("rabû"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("טוֹב"), to: akk("ṭābu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("שָׁלֹשׁ"), to: akk("šalāšu"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("עֶשֶׂר"), to: akk("ešer"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("מֵאָה"), to: akk("meʾat"), type: "cognate_of", confidence: "certain" },
+  { from: hbo("שׁלם", { kind: "part" }), to: akk("š-l-m", { kind: "part" }), type: "cognate_of", confidence: "certain" },
+  { from: hbo("מלך", { kind: "part" }), to: akk("m-l-k", { kind: "part" }), type: "cognate_of", confidence: "certain" },
+  { from: hbo("־וּת", { kind: "part" }), to: akk("-ūtu", { kind: "part" }), type: "cognate_of", confidence: "certain", note: "Abstract-noun suffix shared across Semitic." },
+  { from: grc("γνω-", { kind: "part" }), to: grc("γιγνώσκω"), type: "see_also", confidence: "certain" },
+]
+
+/** Lexical-list style equivalents: Akkadian ↔ Sumerian (what a Babylonian scribe would have paired). */
+const equivalents: [string, string, string?][] = [
+  ["šarru", "lugal"],
+  ["šarrūtu", "nam-lugal"],
+  ["bēlu", "en"],
+  ["bēltu", "nin"],
+  ["ilu", "diŋir"],
+  ["awīlu", "lu₂"],
+  ["sinništu", "munus"],
+  ["aššatu", "dam"],
+  ["māru", "dumu"],
+  ["mārtu", "dumu-munus"],
+  ["abu", "ad-da"],
+  ["ummu", "ama"],
+  ["aḫu", "šeš"],
+  ["aḫātu", "nin₉"],
+  ["bītu", "e₂"],
+  ["ālu", "iri"],
+  ["dūru", "bad₃"],
+  ["mātu", "kalam"],
+  ["mātu", "kur", "KUR is read both mātu ‘land’ and šadû ‘mountain’."],
+  ["šadû", "kur"],
+  ["šamû", "an"],
+  ["erṣetu", "ki"],
+  ["mû", "a"],
+  ["šamšu", "Utu"],
+  ["warḫu", "iti"],
+  ["ūmu", "ud"],
+  ["šattu", "mu#2"],
+  ["šumu", "mu"],
+  ["qātu", "šu"],
+  ["rēšu", "saŋ"],
+  ["libbu", "ša₃"],
+  ["īnu", "igi"],
+  ["pû", "ka"],
+  ["awātu", "inim"],
+  ["napištu", "zi"],
+  ["šīmtu", "nam-tar"],
+  ["dīnu", "di"],
+  ["dayyānu", "di-kud"],
+  ["kaspu", "kug-babbar"],
+  ["ḫurāṣu", "kug-sig₁₇"],
+  ["šeʾu", "še"],
+  ["akalu", "ninda"],
+  ["šikaru", "kaš"],
+  ["alpu", "gu₄"],
+  ["immeru", "udu"],
+  ["imēru", "anše"],
+  ["kalbu", "ur"],
+  ["qarrādu", "ur-saŋ"],
+  ["rabû", "gal"],
+  ["ellu", "kug"],
+  ["peṣû", "babbar"],
+  ["ṣalmu", "gi₆"],
+  ["ṭābu", "dug₃"],
+  ["qabû", "dug₄"],
+  ["šakānu", "ŋar"],
+  ["alāku", "ŋen"],
+  ["epēšu", "du₃"],
+  ["epēšu", "ak"],
+  ["nadānu", "šum₂"],
+  ["šaṭāru", "sar"],
+  ["râmu", "ki-aŋ₂"],
+  ["šalāšu", "eš₅"],
+  ["ešer", "u"],
+]
+
+function parseSux(h: string) {
+  const m = h.match(/^(.*)#(\d+)$/)
+  return m ? sux(m[1]!, { homonym: Number(m[2]) }) : sux(h)
+}
+
+export const relations: SeedRelation[] = [
+  ...loans,
+  ...cognates,
+  ...equivalents.map(([a, s, note]) => ({
+    from: akk(a),
+    to: parseSux(s),
+    type: "equivalent_of" as const,
+    confidence: "certain" as const,
+    note,
+  })),
+  // The "-ūtu / nam- / -וּת" trio: the same grammatical idea in three languages.
+  { from: akk("-ūtu", { kind: "part" }), to: sux("nam-", { kind: "part" }), type: "equivalent_of", confidence: "certain", note: "Both form abstract nouns: šarrūtu = nam-lugal ‘kingship’." },
+]

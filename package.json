@@ -1,0 +1,33 @@
+{
+  "name": "sumer",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "turbo format",
+    "typecheck": "turbo typecheck",
+    "db:generate": "turbo db:generate --filter=@workspace/db",
+    "db:migrate": "turbo db:migrate --filter=@workspace/db",
+    "db:seed": "turbo db:seed --filter=@workspace/db",
+    "db:setup": "turbo db:setup --filter=@workspace/db",
+    "db:studio": "turbo db:studio --filter=@workspace/db",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:reset": "docker compose down -v",
+    "db:stats": "turbo db:stats --filter=@workspace/db"
+  },
+  "devDependencies": {
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "prettier": "^3.9.10",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "turbo": "^2.11.10",
+    "typescript": "^5"
+  },
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}

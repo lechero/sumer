@@ -1,0 +1,38 @@
+{
+  "name": "@workspace/db",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "description": "Drizzle schema, client, migrations and seed data for the ancient-languages dictionary.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./queries": "./src/queries.ts",
+    "./normalize": "./src/normalize.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --import tsx src/migrate.ts",
+    "db:seed": "node --import tsx src/seed/index.ts",
+    "db:setup": "pnpm db:migrate && pnpm db:seed",
+    "db:studio": "drizzle-kit studio",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "db:stats": "node --import tsx src/stats.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.11",
+    "dotenv": "^18.0.9",
+    "drizzle-orm": "^0.45.4",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^10",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  }
+}

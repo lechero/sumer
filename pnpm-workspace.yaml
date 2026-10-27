@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# esbuild ships prebuilt binaries as optional deps; its postinstall is not needed.
+allowBuilds:
+  esbuild: false

@@ -1,0 +1,756 @@
+/**
+ * Sumerian (sux) — base vocabulary and grammatical parts.
+ *
+ * Conventions follow ePSD2 / Oracc: ŋ for the velar nasal (often written ĝ or g̃
+ * elsewhere), subscript numerals for sign indices (e₂, lu₂, du₃). Cuneiform is
+ * the standard Ur III / Old Babylonian sign (Unicode, via the Oracc Sign List).
+ */
+import { part, word, type SeedDataset } from "../types"
+
+export const sumerian: SeedDataset = {
+  language: {
+    id: "sux",
+    name: "Sumerian",
+    nativeName: "𒅴𒂠 (eme-gir₁₅)",
+    script: "Xsux",
+    scriptName: "Sumero-Akkadian cuneiform",
+    direction: "ltr",
+    family: "Language isolate",
+    period: "c. 3100 BCE – c. 1800 BCE as a spoken language; literary and liturgical use until c. 100 CE",
+    description:
+      "The language of ancient Sumer (southern Mesopotamia), the earliest written language we can read. Agglutinative, ergative, and unrelated to any known language family.",
+    sortOrder: 10,
+  },
+  source: {
+    id: "epsd2",
+    title: "ePSD2 — electronic Pennsylvania Sumerian Dictionary (Oracc)",
+    url: "http://oracc.museum.upenn.edu/epsd2/",
+    license: "CC BY-SA 3.0",
+    citation: "Sjöberg, Tinney et al., ePSD2, Oracc, University of Pennsylvania Museum.",
+  },
+  entries: [
+    /* ── People, society ─────────────────────────────────────────────── */
+    word("lugal", "king", {
+      native: "𒈗",
+      pos: "noun",
+      definition: "King; owner, master (of a slave, animal or object).",
+      etymology:
+        "lu₂ “person” + gal “big”, i.e. “big man”. Written with the single sign LUGAL, which is GAL placed over LU₂.",
+      ref: "lugal[king]",
+      senses: [
+        { gloss: "king", domain: "society" },
+        { gloss: "owner, master", domain: "society" },
+      ],
+      parts: [{ ref: "lu₂", role: "head" }, { ref: "gal", role: "modifier" }],
+    }),
+    word("lu₂", "person, man", {
+      native: "𒇽",
+      pos: "noun",
+      definition: "Human being, person; man. As the first element of compounds: “the one who …”, e.g. lu₂-tur “child”.",
+      ref: "lu[person]",
+      senses: ["person, human being", "man", "the one who … (in compounds)"],
+    }),
+    word("gal", "big, great", {
+      native: "𒃲",
+      pos: "adjective",
+      definition: "Big, great, large; senior (of officials).",
+      ref: "gal[big]",
+    }),
+    word("en", "lord; high priest", {
+      native: "𒂗",
+      pos: "noun",
+      definition: "Lord, master; the en-priest(ess), the highest cultic office of a city god.",
+      ref: "en[lord]",
+      senses: [
+        { gloss: "lord, master", domain: "society" },
+        { gloss: "high priest, high priestess", domain: "religion" },
+      ],
+    }),
+    word("nin", "lady, queen", {
+      native: "𒎏",
+      pos: "noun",
+      definition: "Lady, mistress; queen; (in divine names) goddess, e.g. Nin-ḫursaŋ “Lady of the mountain”.",
+      etymology: "Sign SAL.TUG₂ (MUNUS + TUG₂).",
+      ref: "nin[lady]",
+      senses: ["lady, mistress", "queen", "(in divine names) goddess"],
+    }),
+    word("ensi₂", "city ruler, governor", {
+      native: "𒉺𒋼𒋛",
+      pos: "noun",
+      definition: "Ruler of a city-state; under the Ur III empire, the provincial governor.",
+      etymology: "Written PA.TE.SI. Borrowed into Akkadian as iššiakkum.",
+      ref: "ensik[ruler]",
+    }),
+    word("dumu", "child, son", {
+      native: "𒌉",
+      pos: "noun",
+      definition: "Child, son; member of a group (dumu-uru “citizen”, lit. “child of the city”).",
+      etymology: "Written with the sign TUR “small”.",
+      ref: "dumu[child]",
+      senses: ["child", "son", "member, citizen (in compounds)"],
+    }),
+    word("dumu-munus", "daughter", {
+      native: "𒌉𒊩",
+      pos: "noun",
+      definition: "Daughter, lit. “female child”.",
+      ref: "dumumunus[daughter]",
+      parts: [{ ref: "dumu", role: "head" }, { ref: "munus", role: "modifier" }],
+    }),
+    word("munus", "woman, female", {
+      native: "𒊩",
+      pos: "noun",
+      definition: "Woman; female (of animals). The sign MUNUS (SAL) also serves as determinative before female names.",
+      ref: "munus[woman]",
+    }),
+    word("ama", "mother", { native: "𒂼", pos: "noun", ref: "ama[mother]" }),
+    word("ad-da", "father", {
+      native: "𒀜𒁕",
+      pos: "noun",
+      definition: "Father. Also written a-a.",
+      ref: "ad[father]",
+    }),
+    word("šeš", "brother", { native: "𒋀", pos: "noun", ref: "šeš[brother]" }),
+    word("nin₉", "sister", {
+      native: "𒎐",
+      pos: "noun",
+      etymology: "Sign SAL.KU.",
+      ref: "nin[sister]",
+    }),
+    word("dam", "spouse", {
+      native: "𒁮",
+      pos: "noun",
+      definition: "Spouse: wife or husband. dam … tuku “to marry”, lit. “to acquire a spouse”.",
+      ref: "dam[spouse]",
+    }),
+    word("dub-sar", "scribe", {
+      native: "𒁾𒊬",
+      pos: "noun",
+      definition: "Scribe, lit. “tablet-writer”. Loaned into Akkadian as ṭupšarru.",
+      ref: "dubsar[scribe]",
+      parts: [{ ref: "dub", role: "object" }, { ref: "sar", role: "verb" }],
+    }),
+    word("di-kud", "judge", {
+      native: "𒁲𒋻",
+      pos: "noun",
+      definition: "Judge, lit. “one who decides (cuts) legal cases”.",
+      ref: "dikud[judge]",
+      parts: [{ ref: "di", role: "object" }, { ref: "kud", role: "verb" }],
+    }),
+    word("ur-saŋ", "hero, warrior", {
+      native: "𒌨𒊕",
+      pos: "noun",
+      definition: "Hero, warrior; title of gods and kings.",
+      ref: "ursaŋ[hero]",
+      parts: ["ur", "saŋ"],
+    }),
+
+    /* ── Cosmos, places, buildings ───────────────────────────────────── */
+    word("an", "sky, heaven", {
+      native: "𒀭",
+      pos: "noun",
+      definition: "Sky, heaven; the sky god An, head of the pantheon.",
+      ref: "an[sky]",
+      senses: [
+        { gloss: "sky, heaven", domain: "cosmos" },
+        { gloss: "An, the sky god", domain: "religion" },
+      ],
+    }),
+    word("diŋir", "god, deity", {
+      native: "𒀭",
+      pos: "noun",
+      definition: "God, goddess, deity. The same sign AN is used, unpronounced, as a determinative before divine names.",
+      ref: "diŋir[deity]",
+    }),
+    word("ki", "earth, place", {
+      native: "𒆠",
+      pos: "noun",
+      definition: "Earth, ground; place; the underworld. Also a determinative after place names.",
+      ref: "ki[place]",
+      senses: ["earth, ground", "place, location", "the netherworld"],
+    }),
+    word("kur", "mountain, foreign land", {
+      native: "𒆳",
+      pos: "noun",
+      definition: "Mountain(s); foreign land, in contrast to kalam “the homeland”; the netherworld.",
+      ref: "kur[mountain]",
+      senses: ["mountain, highland", "(foreign) land, country", "the netherworld"],
+    }),
+    word("kalam", "the land (Sumer)", {
+      native: "𒌧",
+      pos: "noun",
+      definition: "The Land, i.e. Sumer, the homeland, as opposed to kur, the foreign mountain lands.",
+      ref: "kalam[land]",
+    }),
+    word("a", "water", {
+      native: "𒀀",
+      pos: "noun",
+      definition: "Water; semen, offspring.",
+      ref: "a[water]",
+      senses: ["water", "semen; offspring"],
+    }),
+    word("ab", "sea", {
+      native: "𒀊",
+      pos: "noun",
+      definition: "Sea, lake. The same sign is read eš₃ “shrine”.",
+      ref: "ab[sea]",
+    }),
+    word("a-ab-ba", "sea", {
+      native: "𒀀𒀊𒁀",
+      pos: "noun",
+      definition: "The sea, lit. “water of the sea”.",
+      ref: "aba[sea]",
+      parts: ["a", "ab"],
+    }),
+    word("abzu", "the deep, subterranean water", {
+      native: "𒍪𒀊",
+      pos: "noun",
+      definition: "The cosmic fresh-water ocean beneath the earth, home of the god Enki; also a water basin in temples. Written ZU.AB; Akkadian apsû.",
+      ref: "abzu[water]",
+    }),
+    word("e₂", "house, temple", {
+      native: "𒂍",
+      pos: "noun",
+      definition: "House, dwelling; household, estate; temple (the house of a god).",
+      ref: "e[house]",
+      senses: ["house, dwelling", "household, estate", "temple"],
+    }),
+    word("e₂-gal", "palace", {
+      native: "𒂍𒃲",
+      pos: "noun",
+      definition: "Palace, lit. “big house”. Borrowed into Akkadian as ekallu and from there into Hebrew hêḵāl “palace, temple”.",
+      ref: "egal[palace]",
+      parts: [{ ref: "e₂", role: "head" }, { ref: "gal", role: "modifier" }],
+    }),
+    word("e₂-dub-ba-a", "scribal school", {
+      native: "𒂍𒁾𒁀𒀀",
+      pos: "noun",
+      definition: "The scribal school, the “tablet house” where cuneiform was taught.",
+      etymology: "e₂ “house” + dub “tablet” + ba “to allot”: “house that distributes tablets” (one traditional analysis).",
+      ref: "edubba[school]",
+      parts: ["e₂", "dub", "ba"],
+    }),
+    word("iri", "city", {
+      native: "𒌷",
+      pos: "noun",
+      definition: "City, town. Also read uru. The sign is also a determinative before city names.",
+      ref: "iri[city]",
+    }),
+    word("bad₃", "city wall", {
+      native: "𒂦",
+      pos: "noun",
+      definition: "City wall, fortification.",
+      ref: "bad[wall]",
+    }),
+
+    /* ── Body ────────────────────────────────────────────────────────── */
+    word("saŋ", "head", {
+      native: "𒊕",
+      pos: "noun",
+      definition: "Head; top, front; (as a unit) a person, a slave (“head” of people).",
+      ref: "saŋ[head]",
+      senses: ["head", "front, top, first", "person, slave (counted by head)"],
+    }),
+    word("igi", "eye; face", {
+      native: "𒅆",
+      pos: "noun",
+      definition: "Eye; face, front. igi … du₈ “to see”; igi-še₃ “before, in front of”.",
+      ref: "igi[eye]",
+    }),
+    word("ka", "mouth", {
+      native: "𒅗",
+      pos: "noun",
+      definition: "Mouth. The sign KA is also read inim “word”, dug₄ “to speak”, zu₂ “tooth”, gu₃ “voice”.",
+      ref: "ka[mouth]",
+    }),
+    word("šu", "hand", {
+      native: "𒋗",
+      pos: "noun",
+      definition: "Hand. Very frequent in compound verbs: šu … ti “to receive”, šu … bar “to release”, šu … du₇ “to complete”.",
+      ref: "šu[hand]",
+    }),
+    word("ša₃", "heart, inside", {
+      native: "𒊮",
+      pos: "noun",
+      definition: "Heart; inside, interior; womb; the middle of something.",
+      ref: "šag[heart]",
+      senses: ["heart (as seat of emotion)", "inside, interior, middle", "womb"],
+    }),
+    word("zi", "life, breath", {
+      native: "𒍣",
+      pos: "noun",
+      definition: "Life, breath; (as adjective, zid) true, right, faithful.",
+      ref: "zi[life]",
+      senses: ["life, breath, throat", "true, right, faithful (zid)"],
+    }),
+    word("inim", "word", {
+      native: "𒅗",
+      pos: "noun",
+      definition: "Word, utterance; matter, affair; command.",
+      ref: "inim[word]",
+    }),
+
+    /* ── Writing, law, ideas ─────────────────────────────────────────── */
+    word("dub", "tablet", {
+      native: "𒁾",
+      pos: "noun",
+      definition: "Clay tablet; document. Loaned into Akkadian as ṭuppu.",
+      ref: "dub[tablet]",
+    }),
+    word("di", "lawsuit, judgment", {
+      native: "𒁲",
+      pos: "noun",
+      definition: "Legal case, lawsuit; judgment, verdict.",
+      ref: "di[lawsuit]",
+    }),
+    word("me", "divine power, essence", {
+      native: "𒈨",
+      pos: "noun",
+      definition: "The divine powers or ordinances that underlie civilisation (kingship, crafts, cult…); essence, being.",
+      ref: "me[essence]",
+    }),
+    word("nam", "fate, destiny", {
+      native: "𒉆",
+      pos: "noun",
+      definition: "Fate, destiny, lot. As a prefix it forms abstract nouns: nam-lugal “kingship”, nam-tar “fate”.",
+      ref: "nam[destiny]",
+    }),
+    word("nam-lugal", "kingship", {
+      native: "𒉆𒈗",
+      pos: "noun",
+      definition: "Kingship, royal office; kingdom.",
+      ref: "namlugal[kingship]",
+      parts: [{ ref: "part:nam-", role: "affix" }, { ref: "lugal", role: "base" }],
+    }),
+    word("nam-tar", "fate", {
+      native: "𒉆𒋻",
+      pos: "noun",
+      definition: "Fate, destiny, lit. “that which is decided/cut”; also the netherworld demon Namtar.",
+      ref: "namtar[fate]",
+      parts: [{ ref: "part:nam-", role: "affix" }, { ref: "tar", role: "base" }],
+    }),
+    word("mu", "name", {
+      native: "𒈬",
+      pos: "noun",
+      definition: "Name; fame. mu … sa₄ “to name”; mu-sar “inscription”.",
+      ref: "mu[name]",
+    }),
+    word("mu", "year", {
+      native: "𒈬",
+      homonym: 2,
+      pos: "noun",
+      definition: "Year; a line of text. Ur III year names begin with mu “(the year in which) …”.",
+      ref: "mu[year]",
+    }),
+    word("ud", "day; sun; storm", {
+      native: "𒌓",
+      pos: "noun",
+      definition: "Day; sun, light; storm; time. ud … -a “when”.",
+      ref: "ud[day]",
+      senses: ["day; daylight", "sun", "storm", "time; when (ud … -a)"],
+    }),
+    word("iti", "month", {
+      native: "𒌗",
+      pos: "noun",
+      definition: "Month; moonlight.",
+      ref: "iti[month]",
+    }),
+    word("gi₆", "night; black", {
+      native: "𒈪",
+      pos: "noun",
+      definition: "Night; (as adjective) black, dark.",
+      ref: "ŋi[night]",
+      senses: ["night", "black, dark"],
+    }),
+    word("babbar", "white", {
+      native: "𒌓",
+      pos: "adjective",
+      definition: "White, bright. Same sign as ud “sun, day”.",
+      ref: "babbar[white]",
+    }),
+    word("kug", "pure, holy; precious metal", {
+      native: "𒆬",
+      pos: "adjective",
+      definition: "Pure, holy, sacred; (as noun) precious metal, silver.",
+      ref: "kug[pure]",
+      senses: ["pure, holy, sacred", "precious metal; silver"],
+    }),
+    word("kug-babbar", "silver", {
+      native: "𒆬𒌓",
+      pos: "noun",
+      definition: "Silver, lit. “white precious metal”.",
+      ref: "kugbabbar[silver]",
+      parts: [{ ref: "kug", role: "head" }, { ref: "babbar", role: "modifier" }],
+    }),
+    word("kug-sig₁₇", "gold", {
+      native: "𒆬𒄀",
+      pos: "noun",
+      definition: "Gold, lit. “yellow precious metal”.",
+      ref: "kugsig[gold]",
+      parts: [{ ref: "kug", role: "head" }, { ref: "sig₁₇", role: "modifier" }],
+    }),
+    word("sig₁₇", "yellow", {
+      native: "𒄀",
+      pos: "adjective",
+      definition: "Yellow, yellowish-green. Same sign as gi “reed”.",
+      ref: "sig[yellow]",
+    }),
+    word("kalag", "strong, mighty", {
+      native: "𒆗",
+      pos: "adjective",
+      definition: "Strong, mighty; (read kal) precious, valuable, rare.",
+      ref: "kalag[strong]",
+    }),
+    word("dug₃", "good, sweet", {
+      native: "𒄭",
+      pos: "adjective",
+      definition: "Good, sweet, pleasant. Also read du₁₀.",
+      ref: "dug[good]",
+    }),
+
+    /* ── Economy, animals, food ──────────────────────────────────────── */
+    word("še", "barley, grain", {
+      native: "𒊺",
+      pos: "noun",
+      definition: "Barley, the staple grain; also the smallest unit of weight (“grain”).",
+      ref: "še[barley]",
+    }),
+    word("ninda", "bread", {
+      native: "𒃻",
+      pos: "noun",
+      definition: "Bread, food. Same sign as ŋar “to place” and niŋ₂ “thing”.",
+      ref: "ninda[bread]",
+    }),
+    word("kaš", "beer", {
+      native: "𒁉",
+      pos: "noun",
+      definition: "Beer, the everyday drink of Mesopotamia. Sign BI.",
+      ref: "kaš[beer]",
+    }),
+    word("gu₄", "ox, bull", { native: "𒄞", pos: "noun", ref: "gud[ox]" }),
+    word("udu", "sheep", { native: "𒇻", pos: "noun", ref: "udu[sheep]" }),
+    word("anše", "donkey, equid", {
+      native: "𒀲",
+      pos: "noun",
+      definition: "Donkey; equid in general (anše-kur-ra “horse”, lit. “donkey of the mountains”).",
+      ref: "anše[equid]",
+    }),
+    word("ur", "dog", {
+      native: "𒌨",
+      pos: "noun",
+      definition: "Dog; carnivore in general (ur-maḫ “lion”, lit. “great dog”); in ur-saŋ “hero”.",
+      ref: "ur[dog]",
+    }),
+    word("gi", "reed", {
+      native: "𒄀",
+      pos: "noun",
+      definition: "Reed; a reed as a measuring rod. Loaned into Akkadian as qanû, cf. Hebrew qāneh, Greek κάννα, Latin canna.",
+      ref: "gi[reed]",
+    }),
+    word("ŋeš", "tree, wood", {
+      native: "𒄑",
+      pos: "noun",
+      definition: "Tree; wood; wooden object. The sign GIŠ is also the determinative before names of trees and wooden things.",
+      ref: "ŋeš[tree]",
+    }),
+    word("gu-za", "chair, throne", {
+      native: "𒄖𒍝",
+      pos: "noun",
+      definition: "Chair, seat; throne. Cf. Akkadian kussû, Hebrew kissēʾ; the direction of borrowing is debated.",
+      ref: "guza[chair]",
+    }),
+    word("ma-na", "mina", {
+      native: "𒈠𒈾",
+      pos: "noun",
+      definition: "Mina, the unit of weight of 60 shekels (c. 500 g). Related to Akkadian manû “to count; mina”.",
+      ref: "mana[unit]",
+    }),
+
+    /* ── Verbs ───────────────────────────────────────────────────────── */
+    word("dug₄", "to speak, say", {
+      native: "𒅗",
+      pos: "verb",
+      definition: "To speak, say; to do, perform (as the light verb of many compound verbs). Imperfective (marû) stem: e.",
+      ref: "dug[speak]",
+    }),
+    word("ŋar", "to place, put", {
+      native: "𒃻",
+      pos: "verb",
+      definition: "To place, put, set; to establish, deposit.",
+      ref: "ŋar[place]",
+    }),
+    word("ŋen", "to go, come", {
+      native: "𒁺",
+      pos: "verb",
+      definition: "To go, come. Suppletive stems: ŋen (singular perfective), du (imperfective), re₇ / su₈ (plural).",
+      ref: "ŋen[go]",
+    }),
+    word("gub", "to stand", {
+      native: "𒁺",
+      pos: "verb",
+      definition: "To stand; to set up, erect; to serve, be stationed. Same sign (DU) as ŋen “to go”.",
+      ref: "gub[stand]",
+    }),
+    word("du₃", "to build", {
+      native: "𒆕",
+      pos: "verb",
+      definition: "To build, construct, erect; to plant.",
+      ref: "du[build]",
+    }),
+    word("ak", "to do, make", {
+      native: "𒀝",
+      pos: "verb",
+      definition: "To do, make, act. Frequent as the second element of compound verbs.",
+      ref: "ak[do]",
+    }),
+    word("šum₂", "to give", {
+      native: "𒋧",
+      pos: "verb",
+      definition: "To give. Also transliterated sum.",
+      ref: "šum[give]",
+    }),
+    word("tuku", "to have, acquire", {
+      native: "𒌇",
+      pos: "verb",
+      definition: "To have, hold, acquire; to marry (dam … tuku).",
+      ref: "tuku[acquire]",
+    }),
+    word("ba", "to allot, give as a share", {
+      native: "𒁀",
+      pos: "verb",
+      definition: "To allot, distribute, give as a share.",
+      ref: "ba[allot]",
+    }),
+    word("sar", "to write", {
+      native: "𒊬",
+      pos: "verb",
+      definition: "To write, inscribe. Also: to run; garden plot (as a noun / area unit).",
+      ref: "sar[write]",
+    }),
+    word("tar", "to cut; to decide", {
+      native: "𒋻",
+      pos: "verb",
+      definition: "To cut; to decide, determine (nam … tar “to decree a fate”). Same sign is read kud.",
+      ref: "tar[cut]",
+    }),
+    word("kud", "to cut off; to decide a case", {
+      native: "𒋻",
+      pos: "verb",
+      definition: "To cut, cut off, separate; to decide a legal case (di … kud); to levy taxes.",
+      ref: "kud[cut]",
+    }),
+    word("ki-aŋ₂", "to love; beloved", {
+      native: "𒆠𒉘",
+      pos: "verb",
+      definition: "To love; (as participle) beloved — a stock royal epithet, e.g. ki-aŋ₂ Inana “beloved of Inana”.",
+      etymology: "Compound verb ki “place/earth” + aŋ₂ “to measure out”.",
+      ref: "ki aŋ[love]",
+      parts: ["ki", "aŋ₂"],
+    }),
+    word("aŋ₂", "to measure out", {
+      native: "𒉘",
+      pos: "verb",
+      definition: "To measure (out), mete; to weigh.",
+      ref: "aŋ[measure]",
+    }),
+
+    /* ── Deities (composition on display) ────────────────────────────── */
+    word("En-lil₂", "Enlil", {
+      native: "𒀭𒂗𒆤",
+      pos: "proper_noun",
+      definition: "Enlil, chief god of the Sumerian pantheon, lord of Nippur; lit. “Lord Wind/Air”.",
+      ref: "Enlil[1]",
+      parts: ["en", "lil₂"],
+    }),
+    word("lil₂", "wind, air; spirit", {
+      native: "𒆤",
+      pos: "noun",
+      definition: "Wind, breeze, air; ghost, spirit.",
+      ref: "lil[wind]",
+    }),
+    word("En-ki", "Enki", {
+      native: "𒀭𒂗𒆠",
+      pos: "proper_noun",
+      definition: "Enki, god of fresh water, wisdom and crafts, lord of Eridu and of the abzu; lit. “Lord Earth”. Akkadian Ea.",
+      ref: "Enki[1]",
+      parts: ["en", "ki"],
+    }),
+    word("Inana", "Inanna", {
+      native: "𒀭𒈹",
+      pos: "proper_noun",
+      definition: "Inanna, goddess of love, war and the planet Venus, lady of Uruk. Akkadian Ištar.",
+      etymology: "Probably nin-an-ak “Lady of Heaven”; written with the sign MUŠ₃.",
+      ref: "Inana[1]",
+    }),
+    word("Utu", "Utu (sun god)", {
+      native: "𒀭𒌓",
+      pos: "proper_noun",
+      definition: "Utu, the sun god and god of justice. Akkadian Šamaš.",
+      ref: "Utu[1]",
+      parts: [{ ref: "ud", note: "the sign UD “sun, day”" }],
+    }),
+    word("Nanna", "Nanna (moon god)", {
+      native: "𒀭𒋀𒆠",
+      pos: "proper_noun",
+      definition: "Nanna, the moon god, lord of Ur, father of Utu and Inanna. Akkadian Sîn.",
+      etymology: "Written ŠEŠ.KI.",
+      ref: "Nanna[1]",
+    }),
+    word("Ereš-ki-gal", "Ereshkigal", {
+      native: "𒀭𒎏𒆠𒃲",
+      pos: "proper_noun",
+      definition: "Ereshkigal, queen of the netherworld; lit. “Queen of the Great Earth (below)”.",
+      ref: "Ereškigal[1]",
+      parts: [{ ref: "nin", note: "read ereš “queen”" }, "ki", "gal"],
+    }),
+    word("Dumu-zid", "Dumuzid (Tammuz)", {
+      native: "𒀭𒌉𒍣",
+      pos: "proper_noun",
+      definition: "Dumuzid, the shepherd god and consort of Inanna, who dies and is mourned each summer; lit. “Faithful/True Son”. Akkadian Dumuzi/Tammūzu, Hebrew Tammûz.",
+      ref: "Dumuzid[1]",
+      parts: ["dumu", { ref: "zi", note: "zid “true, faithful”" }],
+    }),
+
+    /* ── Numerals ────────────────────────────────────────────────────── */
+    word("diš", "one", { native: "𒁹", pos: "numeral", definition: "One. The vertical wedge; also the determinative before male personal names.", ref: "diš[one]" }),
+    word("min", "two", { native: "𒈫", pos: "numeral", ref: "min[two]" }),
+    word("eš₅", "three", { native: "𒐈", pos: "numeral", ref: "eš[three]" }),
+    word("limmu", "four", { native: "𒐉", pos: "numeral", ref: "limmu[four]" }),
+    word("ia₂", "five", { native: "𒐊", pos: "numeral", ref: "ia[five]" }),
+    word("aš₃", "six", { native: "𒐋", pos: "numeral", ref: "aš[six]" }),
+    word("imin", "seven", { native: "𒐌", pos: "numeral", ref: "imin[seven]" }),
+    word("ussu", "eight", { native: "𒐍", pos: "numeral", ref: "ussu[eight]" }),
+    word("ilimmu", "nine", { native: "𒐎", pos: "numeral", ref: "ilimmu[nine]" }),
+    word("u", "ten", { native: "𒌋", pos: "numeral", definition: "Ten. The Winkelhaken (corner wedge).", ref: "u[ten]" }),
+    word("ŋeš₂", "sixty", {
+      native: "𒐕",
+      pos: "numeral",
+      definition: "Sixty, the base of the sexagesimal system; written like diš “one”, one order of magnitude up.",
+      ref: "ŋeš[sixty]",
+    }),
+    word("šar₂", "3600; totality", {
+      native: "𒊹",
+      pos: "numeral",
+      definition: "3600 (60 × 60); hence “all, totality, countless”.",
+      ref: "šar[totality]",
+    }),
+
+    /* ── Parts: nominal morphology ───────────────────────────────────── */
+    part("-e", "clitic", "ergative case marker (agent)", {
+      native: "𒂊",
+      definition: "Marks the agent of a transitive verb: lugal-e e₂ mu-un-du₃ “the king built the house”. Also the directive/locative-terminative case (“towards, at”).",
+      senses: ["ergative: marks the agent", "directive: towards, at, next to"],
+    }),
+    part("-ak", "clitic", "genitive “of”", {
+      definition: "Genitive postposition. The final /k/ surfaces only before a vowel: e₂ lugal-ak → e₂ lugal-la “the house of the king”; lugal kalam-ma-ke₄ “the king of the Land (ergative)”.",
+    }),
+    part("-ra", "clitic", "dative “to, for” (animate)", {
+      native: "𒊏",
+      definition: "Dative case, used with animate nouns: lugal-ra “to/for the king”.",
+    }),
+    part("-a", "clitic", "locative “in, at”", {
+      native: "𒀀",
+      definition: "Locative case: e₂-a “in the house”.",
+    }),
+    part("-a", "suffix", "nominaliser / subordinator", {
+      native: "𒀀",
+      homonym: 2,
+      definition: "Turns a finite verb into a noun or relative clause: lugal-e in-du₃-a “(the house) that the king built”; ud … -a “when …”.",
+    }),
+    part("-da", "clitic", "comitative “with”", { native: "𒁕", definition: "Comitative case: lugal-da “with the king”." }),
+    part("-ta", "clitic", "ablative “from, out of”", { native: "𒋫", definition: "Ablative-instrumental case: e₂-ta “from the house”; also “by means of”." }),
+    part("-še₃", "clitic", "terminative “to, towards”", { native: "𒂠", definition: "Terminative case: iri-še₃ “to the city”; also expresses purpose." }),
+    part("-gin₇", "clitic", "equative “like, as”", { native: "𒁶", definition: "Equative case: an-gin₇ “like heaven”." }),
+    part("-ene", "suffix", "plural (animate)", {
+      definition: "Plural marker for animate nouns: lugal-ene “kings”, diŋir-re-ne “the gods”. Inanimate plurals use reduplication (kur-kur “all the lands”).",
+    }),
+    part("-ŋu₁₀", "clitic", "my", { native: "𒈬", definition: "1st person singular possessive: lugal-ŋu₁₀ “my king”." }),
+    part("-zu", "clitic", "your (singular)", { native: "𒍪", definition: "2nd person singular possessive: e₂-zu “your house”." }),
+    part("-ani", "clitic", "his, her", { definition: "3rd person singular animate possessive: dumu-ni “his/her child” (written -ni after a vowel)." }),
+    part("-bi", "clitic", "its, their (inanimate); that", {
+      native: "𒁉",
+      definition: "3rd person inanimate possessive, also demonstrative (“that”) and adverbial (-bi “-ly”): e₂-bi “its/that house”.",
+    }),
+    part("-am₃", "clitic", "is (enclitic copula)", {
+      native: "𒀀𒀭",
+      definition: "3rd person singular enclitic copula “it is”: lugal-am₃ “he is the king”. Written A.AN.",
+    }),
+    part("-men", "clitic", "I am / you are (copula)", {
+      native: "𒈨𒂗",
+      definition: "1st and 2nd person singular enclitic copula: lugal-me-en “I am the king / you are the king”.",
+    }),
+
+    /* ── Parts: verbal morphology ────────────────────────────────────── */
+    part("mu-", "prefix", "ventive verbal prefix (“hither”)", {
+      native: "𒈬",
+      definition: "Conjugation prefix indicating motion or orientation towards the speaker / the here-and-now; very common in royal inscriptions: mu-un-du₃ “he built (it)”.",
+    }),
+    part("i₃-", "prefix", "neutral finite verbal prefix", {
+      native: "𒉌",
+      definition: "The unmarked conjugation prefix (also written i-, ib₂-, in-): in-na-an-šum₂ “he gave it to him”.",
+    }),
+    part("ba-", "prefix", "middle / “away” verbal prefix", {
+      native: "𒁀",
+      definition: "Conjugation prefix with middle-voice, passive-like or “away from the speaker” nuance: ba-uš₂ “he died”, ba-an-šum₂ “it was given”.",
+    }),
+    part("nu-", "prefix", "not (negation)", { native: "𒉡", definition: "Negative verbal prefix: nu-mu-un-zu “he did not know”." }),
+    part("ḫe₂-", "prefix", "may, let (precative)", {
+      native: "𒃶",
+      definition: "Modal prefix: wishes and affirmations (ḫe₂-en-šum₂ “may he give”; with perfective “indeed”). Also written ḫa-, ḫu-.",
+    }),
+    part("ga-", "prefix", "let me (cohortative)", { native: "𒂵", definition: "1st person modal prefix: ga-na-ab-dug₄ “let me say it to him”." }),
+    part("na-", "prefix", "prohibitive / affirmative", {
+      native: "𒈾",
+      definition: "With imperfective forms, a prohibition “do not …”; with perfective forms, an affirmation “truly, indeed”.",
+    }),
+    part("-n-", "infix", "3rd person animate (agent / patient)", {
+      definition: "Pronominal element inside the verb referring to a person: mu-n-du₃ “he built it”.",
+    }),
+    part("-b-", "infix", "3rd person inanimate (agent / patient)", {
+      definition: "Pronominal element inside the verb referring to a thing: mu-b-du₃ “it (something) built it”.",
+    }),
+    part("-eš", "suffix", "they (3rd plural, perfective)", { definition: "3rd person plural subject suffix on perfective (ḫamṭu) verbs: mu-un-du₃-eš “they built”." }),
+    part("-ed", "suffix", "imperfective / future marker", { definition: "Marks imperfective (marû) verbs and future-oriented forms: du₃-ed “will build, to be built”." }),
+
+    /* ── Parts: derivation & determinatives ──────────────────────────── */
+    part("nam-", "prefix", "abstract noun formative (-ship, -hood)", {
+      native: "𒉆",
+      definition: "Forms abstract nouns: nam-lugal “kingship”, nam-dumu “sonship”, nam-tar “fate”. Identical with the noun nam “fate”.",
+    }),
+    part("niŋ₂-", "prefix", "thing (concrete noun formative)", {
+      native: "𒃻",
+      definition: "“Thing” used to build concrete nouns from verbs and adjectives: niŋ₂-ba “gift” (ba “to allot”), niŋ₂-gig “taboo, abomination”.",
+    }),
+    part("𒀭", "determinative", "divine name determinative (d)", {
+      translit: "d",
+      definition: "The sign AN/DIŊIR written, unpronounced, before the names of gods: 𒀭𒂗𒆤 = ᵈEn-lil₂. Transliterated as a superscript d.",
+    }),
+    part("𒆠", "determinative", "place name determinative (ki)", {
+      translit: "ki",
+      definition: "The sign KI written after names of cities and places: Urim₅ᵏⁱ “Ur”.",
+    }),
+    part("𒌷", "determinative", "city determinative (uru)", {
+      translit: "uru",
+      definition: "The sign URU written before some city names.",
+    }),
+    part("𒄑", "determinative", "wooden object determinative (ŋeš)", {
+      translit: "ŋeš",
+      definition: "The sign GIŠ before trees and things made of wood: ᵍᵉˢ̌gu-za “(wooden) chair”.",
+    }),
+    part("𒇽", "determinative", "profession determinative (lu₂)", {
+      translit: "lu₂",
+      definition: "The sign LU₂ before names of professions and classes of people.",
+    }),
+    part("𒁹", "determinative", "male personal name determinative (m / diš)", {
+      translit: "m",
+      definition: "The single vertical wedge before male personal names, transliterated as superscript m or ¹.",
+    }),
+    part("𒊩", "determinative", "female personal name determinative (f / munus)", {
+      translit: "f",
+      definition: "The sign MUNUS before female personal names, transliterated as superscript f or ᵐᶦ.",
+    }),
+    part("𒆳", "determinative", "land / country determinative (kur)", {
+      translit: "kur",
+      definition: "The sign KUR before names of lands and mountains.",
+    }),
+  ],
+}

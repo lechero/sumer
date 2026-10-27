@@ -1,0 +1,7 @@
+export * from "./schema"
+export { closeDatabase, getDb, openDatabase } from "./client"
+export type { Database, DatabaseHandle, Schema } from "./client"
+export { findWorkspaceRoot, getDatabaseInfo, loadEnv } from "./env"
+export type { DatabaseInfo } from "./env"
+export { buildSearchKey, normalizeForSearch } from "./normalize"
+export * from "./queries"
