@@ -50,3 +50,6 @@ next-env.d.ts
 
 # raw downloads of the importers (re-fetched on demand)
 .cache/
+
+# go-task checksums (Taskfile.yml sources)
+.task/

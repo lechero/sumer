@@ -22,6 +22,8 @@ pnpm dev                 # http://localhost:3000
 
 Requires Node 24 (see `.node-version`) and pnpm 12 (`corepack enable` installs the pinned version from `package.json`).
 
+**With [Task](https://taskfile.dev)** (`brew install go-task`): `task setup` does all of the above, `task setup:pglite` does it without Docker, and `task` lists every command. Tasks mirror the pnpm scripts below (`task dev`, `task db:seed`, `task import -- osl --limit 500`), install dependencies when the lockfile changes, and ask before deleting data. `task doctor` shows your toolchain and which database the scripts will use.
+
 **No Docker?** Skip the `.env` (or leave `DATABASE_URL` empty). The app and the `db:*` scripts then use an embedded PGlite database stored in `./.pglite` — same schema, same data, no services. One caveat: only one process can hold a PGlite directory open, so stop `pnpm dev` before running `pnpm db:seed` / `pnpm db:stats` (Postgres has no such limit).
 
 ## Collecting the dictionaries

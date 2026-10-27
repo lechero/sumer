@@ -1,0 +1,230 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+#
+# Developer entry points for the repo: `task` lists them, `task <name> -- <args>`
+# passes extra arguments through (e.g. `task import -- osl --limit 500`).
+# Each task wraps the pnpm/turbo script of the same name, so both keep working.
+version: "3"
+
+tasks:
+  default:
+    silent: true
+    cmds:
+      - task --list
+
+  # ── Setup ────────────────────────────────────────────────────────────────────
+
+  setup:
+    desc: First-time setup with Postgres in Docker (.env, install, start Postgres, migrate + seed)
+    cmds:
+      - task: env
+      - task: install
+      - task: docker:up
+      - task: db:setup
+
+  setup:pglite:
+    desc: First-time setup without Docker, using the embedded PGlite database in ./.pglite
+    preconditions:
+      - sh: '! grep -qs "^DATABASE_URL=." .env'
+        msg: ".env sets DATABASE_URL, so the scripts would use Postgres. Clear it, or run `task setup` instead."
+    cmds:
+      - task: install
+      - task: db:setup
+
+  env:
+    desc: Create .env from .env.example if it does not exist yet
+    cmds:
+      - cp .env.example .env
+    status:
+      - test -f .env
+
+  install:
+    desc: Install workspace dependencies (skipped when the lockfile and manifests are unchanged)
+    run: once
+    silent: true
+    preconditions:
+      - sh: command -v pnpm
+        msg: "pnpm not found. Run `corepack enable` to install the version pinned in package.json."
+    sources:
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - apps/*/package.json
+      - packages/*/package.json
+    generates:
+      - node_modules/.modules.yaml
+    cmds:
+      - pnpm install
+
+  doctor:
+    desc: Show the local toolchain and which database the scripts will use
+    silent: true
+    cmds:
+      - 'echo "node    $(node --version 2>/dev/null || echo missing)  (wants v$(cat .node-version))"'
+      - 'echo "pnpm    $(pnpm --version 2>/dev/null || echo "missing, run: corepack enable")"'
+      - 'echo "docker  $(docker compose version --short 2>/dev/null || echo "missing (optional, PGlite works without it)")"'
+      - 'echo "db      $(grep -qs "^DATABASE_URL=." .env && echo "Postgres (DATABASE_URL in .env)" || echo "PGlite (./.pglite)")"'
+
+  # ── App ──────────────────────────────────────────────────────────────────────
+
+  dev:
+    desc: Start the Next.js dev server on http://localhost:3000
+    deps: [install]
+    interactive: true
+    cmds:
+      - pnpm dev
+
+  build:
+    desc: Production build of the workspace
+    deps: [install]
+    cmds:
+      - pnpm build
+
+  start:
+    desc: Serve the production build of the web app (run `task build` first)
+    deps: [install]
+    interactive: true
+    cmds:
+      - pnpm --filter web start
+
+  ui:add:
+    desc: "Add shadcn components to packages/ui (task ui:add -- dialog tabs)"
+    preconditions:
+      - sh: '{{if .CLI_ARGS}}true{{else}}false{{end}}'
+        msg: "Name at least one component: task ui:add -- dialog"
+    cmds:
+      - task: install
+      - pnpm dlx shadcn@latest add {{.CLI_ARGS}} -c apps/web
+
+  # ── Quality ──────────────────────────────────────────────────────────────────
+
+  check:
+    desc: Typecheck and lint the whole workspace
+    cmds:
+      - task: typecheck
+      - task: lint
+
+  typecheck:
+    desc: Run tsc --noEmit across the workspace
+    deps: [install]
+    cmds:
+      - pnpm typecheck
+
+  lint:
+    desc: Run ESLint across the workspace
+    deps: [install]
+    cmds:
+      - pnpm lint
+
+  format:
+    desc: Format TypeScript sources with Prettier
+    deps: [install]
+    cmds:
+      - pnpm format
+
+  clean:
+    desc: Remove build output and turbo caches (keeps node_modules, .pglite and .cache)
+    cmds:
+      - rm -rf .turbo apps/*/.turbo packages/*/.turbo apps/web/.next
+
+  # ── Database ─────────────────────────────────────────────────────────────────
+  # With PGlite only one process can open ./.pglite: stop `task dev` before
+  # seeding, importing or printing stats.
+
+  db:setup:
+    desc: Apply migrations, then seed the base data
+    deps: [install]
+    cmds:
+      - pnpm db:setup
+
+  db:migrate:
+    desc: Apply SQL migrations from packages/db/drizzle
+    deps: [install]
+    cmds:
+      - pnpm db:migrate
+
+  db:seed:
+    desc: Upsert the curated seed datasets (re-runnable)
+    deps: [install]
+    cmds:
+      - pnpm db:seed
+
+  db:generate:
+    desc: Generate a migration after changing packages/db/src/schema.ts
+    deps: [install]
+    cmds:
+      - pnpm db:generate
+
+  db:stats:
+    desc: Print entry counts per language and a few sample searches
+    deps: [install]
+    cmds:
+      - pnpm db:stats
+
+  db:studio:
+    desc: Open Drizzle Studio on the configured database
+    deps: [install]
+    interactive: true
+    cmds:
+      - pnpm db:studio
+
+  db:psql:
+    desc: Open psql inside the Postgres container
+    interactive: true
+    cmds:
+      - docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+
+  pglite:reset:
+    desc: Delete the embedded PGlite database in ./.pglite and set it up again
+    prompt: This deletes ./.pglite, including imported dictionaries. Continue?
+    cmds:
+      - rm -rf .pglite
+      - task: db:setup
+
+  # ── Docker ───────────────────────────────────────────────────────────────────
+
+  docker:up:
+    desc: Start Postgres and wait until it is healthy
+    preconditions:
+      - sh: docker info >/dev/null 2>&1
+        msg: "Docker is not running. Start it, or use PGlite instead (`task setup:pglite`)."
+    cmds:
+      - docker compose up -d --wait
+
+  docker:down:
+    desc: Stop the Postgres container (data is kept)
+    cmds:
+      - docker compose down
+
+  docker:reset:
+    desc: Stop Postgres and delete its volume
+    prompt: This deletes the Postgres volume and every row in it. Continue?
+    cmds:
+      - docker compose down -v
+
+  docker:logs:
+    desc: Follow the Postgres container logs
+    cmds:
+      - docker compose logs -f postgres
+
+  # ── Dictionaries ─────────────────────────────────────────────────────────────
+
+  import:
+    desc: "Download and load lexica (task import -- osl epsd2 [--limit N] [--offline] [--prune])"
+    deps: [install]
+    cmds:
+      - pnpm import {{.CLI_ARGS}}
+
+  import:all:
+    desc: "Run every importer in order (task import:all -- --offline)"
+    deps: [install]
+    cmds:
+      - pnpm import --all {{.CLI_ARGS}}
+
+  render:
+    desc: 'Render transliterations as cuneiform (task render -- e2-gal "{d}en-lil2")'
+    preconditions:
+      - sh: '{{if .CLI_ARGS}}true{{else}}false{{end}}'
+        msg: 'Pass at least one transliteration: task render -- e2-gal'
+    cmds:
+      - task: install
+      - pnpm --filter @workspace/importers render {{.CLI_ARGS}}
