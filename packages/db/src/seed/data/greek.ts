@@ -6,6 +6,7 @@
 import { part, word, type SeedDataset } from "../types"
 
 export const greek: SeedDataset = {
+  mergeMode: "fill",
   language: {
     id: "grc",
     name: "Ancient Greek",
@@ -20,8 +21,8 @@ export const greek: SeedDataset = {
     sortOrder: 30,
   },
   source: {
-    id: "lsj",
-    title: "Liddell–Scott–Jones, A Greek–English Lexicon (Perseus Digital Library)",
+    id: "seed-grc",
+    title: "Hand-curated Greek base entries (after LSJ)",
     url: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.04.0057",
     license: "CC BY-SA 3.0 (Perseus digital edition)",
     citation: "Liddell, Scott, Jones, A Greek–English Lexicon, 9th ed. 1940, digital edition Perseus / PerseusDL/lexica.",

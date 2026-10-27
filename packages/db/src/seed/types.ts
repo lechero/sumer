@@ -15,6 +15,7 @@ export type SeedSense = { gloss: string; definition?: string; domain?: string }
  *   "lu₂"         → the word  lu₂
  *   "part:nam-"   → the part  nam-
  *   "a#2"         → the word  a, homonym 2
+ *   "ref:a[arm]"  → the entry of this dataset whose source ref is a[arm]
  */
 export type SeedComponent = string | { ref: string; role?: string; note?: string }
 
@@ -27,6 +28,8 @@ export type SeedEntryBase = {
   homonym?: number
   pos?: PartOfSpeech
   gloss: string
+  /** Attestation count (ranking only). */
+  frequency?: number
   definition?: string
   etymology?: string
   notes?: string
@@ -44,6 +47,14 @@ export type SeedDataset = {
   language: NewLanguage
   source: NewSource
   entries: SeedEntry[]
+  /** Relations shipped with the dataset (resolved after its entries are written). */
+  relations?: SeedRelation[]
+  /**
+   * "replace" (default, importers): rows of this source are overwritten; "fill" (hand seeds):
+   * existing rows with the same headword are adopted — only missing descriptive fields are
+   * filled in, imported glosses, sources, senses are never overwritten.
+   */
+  mergeMode?: "replace" | "fill"
 }
 
 export type EntryRef = { lang: string; headword: string; kind?: EntryKind; homonym?: number }

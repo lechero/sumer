@@ -1,8 +1,8 @@
-import { and, asc, count, eq, getTableColumns, ilike, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, count, eq, getTableColumns, ilike, inArray, isNotNull, or, sql, type SQL } from "drizzle-orm"
 
 import type { Database } from "./client"
 import { normalizeForSearch } from "./normalize"
-import { entries, entryComponents, languages, senses, type EntryKind } from "./schema"
+import { entries, entryComponents, languages, senses, signReadings, signs, type EntryKind } from "./schema"
 
 function escapeLike(s: string): string {
   return s.replace(/[\\%_]/g, (c) => `\\${c}`)
@@ -59,16 +59,30 @@ function entryFilter(f: EntryListFilter): SQL | undefined {
   return defined.length ? and(...defined) : undefined
 }
 
-/** 0 = a key variant matches exactly, 1 = a variant starts with the query, 2 = the gloss starts with / contains the word, 3 = anything else. */
+/**
+ * 0 = the headword itself matches, 1 = the gloss is exactly the query (English lookup),
+ * 2 = a popular-spelling / native-script variant matches exactly, 3 = the gloss starts with
+ * or contains the query as a word, 4 = a variant starts with the query, 5 = substring elsewhere.
+ */
 function entryRank(q: string): SQL {
   const key = normalizeForSearch(q)
   const gloss = q.toLowerCase()
   return sql`case
-    when position(${" " + key + " "} in ' ' || ${entries.searchKey} || ' ') > 0 then 0
-    when position(${" " + key} in ' ' || ${entries.searchKey}) > 0 then 1
-    when position(${gloss} in lower(${entries.gloss})) = 1 or position(${" " + gloss} in lower(${entries.gloss})) > 0 then 2
-    else 3 end`
+    when split_part(${entries.searchKey}, ' ', 1) = ${key} then 0
+    when lower(${entries.gloss}) = ${gloss} or lower(${entries.gloss}) like ${gloss + ",%"} or lower(${entries.gloss}) like ${gloss + ";%"} then 1
+    when position(${" " + key + " "} in ' ' || ${entries.searchKey} || ' ') > 0 then 2
+    when position(${gloss} in lower(${entries.gloss})) = 1 or position(${" " + gloss} in lower(${entries.gloss})) > 0 then 3
+    when position(${" " + key} in ' ' || ${entries.searchKey}) > 0 then 4
+    else 5 end`
 }
+
+/** Exact-case headword matches and common words before proper names. */
+function tieBreak(q: string): SQL {
+  return sql`case when ${entries.headword} = ${q} then 0 else 1 end + case when ${entries.partOfSpeech} = 'proper_noun' then 2 else 0 end`
+}
+
+/** Languages in their display order, so Sumerian beats an Akkadian name on a tie. */
+const languageOrder = sql`(select l.sort_order from ${languages} l where l.id = ${entries.languageId})`
 
 export async function listEntries(db: Database, f: EntryListFilter = {}) {
   const where = entryFilter(f)
@@ -80,8 +94,9 @@ export async function listEntries(db: Database, f: EntryListFilter = {}) {
       where,
       with: { language: true },
       orderBy: [
-        ...(f.q?.trim() ? [entryRank(f.q.trim())] : []),
-        asc(entries.kind),
+        ...(f.q?.trim()
+          ? [entryRank(f.q.trim()), tieBreak(f.q.trim()), sql`coalesce(${entries.frequency}, 0) desc`, languageOrder, asc(entries.kind), sql`length(${entries.headword})`]
+          : [asc(entries.kind)]),
         asc(entries.headword),
         asc(entries.homonymIndex),
       ],
@@ -125,4 +140,119 @@ export async function countEntries(db: Database) {
     })
     .from(entries)
   return row ?? { total: 0, words: 0, parts: 0 }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Cuneiform signs
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export type SignListFilter = { q?: string; limit?: number; offset?: number; encodedOnly?: boolean; formsToo?: boolean }
+
+function signFilter(f: SignListFilter): SQL | undefined {
+  const conds: SQL[] = []
+  if (f.encodedOnly !== false) conds.push(isNotNull(signs.unicode))
+  if (!f.formsToo) conds.push(eq(signs.isForm, false))
+  const q = f.q?.trim()
+  if (q) {
+    const key = normalizeForSearch(q)
+    const like = `%${escapeLike(q)}%`
+    const readingMatch = sql`exists (select 1 from ${signReadings} r where r.sign_id = ${signs.id} and (r.search_key = ${key} or r.search_key like ${`${escapeLike(key)}%`}))`
+    const c = or(
+      ilike(signs.name, like),
+      sql`${signs.unicode} like ${like}`,
+      ilike(signs.unicodeName, like),
+      readingMatch
+    )
+    if (c) conds.push(c)
+  }
+  return conds.length ? and(...conds) : undefined
+}
+
+export async function listSigns(db: Database, f: SignListFilter = {}) {
+  const where = signFilter(f)
+  const limit = Math.min(Math.max(f.limit ?? 120, 1), 1000)
+  const offset = Math.max(f.offset ?? 0, 0)
+  const q = f.q?.trim()
+  const rank = q
+    ? sql`case when exists (select 1 from ${signReadings} r where r.sign_id = ${signs.id} and r.search_key = ${normalizeForSearch(q)}) then 0 when lower(${signs.name}) = ${q.toLowerCase()} then 0 else 1 end`
+    : sql`0`
+  const [rows, totals] = await Promise.all([
+    db.query.signs.findMany({
+      where,
+      with: { readings: { orderBy: [asc(signReadings.sortOrder)], limit: 6 } },
+      orderBy: [rank, asc(signs.name)],
+      limit,
+      offset,
+    }),
+    db.select({ total: count() }).from(signs).where(where),
+  ])
+  return { rows, total: totals[0]?.total ?? 0, limit, offset }
+}
+
+export type SignListItem = Awaited<ReturnType<typeof listSigns>>["rows"][number]
+
+const SUBSCRIPT: Record<string, string> = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" }
+
+/** Accepts the Oracc name as written (E₂, |SAL.TUG₂|) or typed plainly (E2, e2, sal.tug2). */
+export async function getSignByName(db: Database, name: string) {
+  const subscripted = name.replace(/(\D)(\d+)/g, (_, a: string, d: string) => a + [...d].map((c) => SUBSCRIPT[c] ?? c).join(""))
+  const candidates = [...new Set([name, subscripted, subscripted.toUpperCase(), name.toUpperCase()])]
+  const row = await db.query.signs.findFirst({ where: inArray(signs.name, candidates), columns: { name: true } })
+  if (!row) return undefined
+  return db.query.signs.findFirst({
+    where: eq(signs.name, row.name),
+    with: {
+      readings: { orderBy: [asc(signReadings.sortOrder)] },
+      parent: true,
+      forms: { orderBy: [asc(signs.name)] },
+      source: true,
+    },
+  })
+}
+
+export type SignDetail = NonNullable<Awaited<ReturnType<typeof getSignByName>>>
+
+/** Signs for every distinct code point in a cuneiform string, keyed by glyph. */
+export async function getSignsForText(db: Database, text: string) {
+  const glyphs = [...new Set([...text].filter((ch) => {
+    const cp = ch.codePointAt(0) ?? 0
+    return cp >= 0x12000 && cp <= 0x1254f
+  }))]
+  if (!glyphs.length) return new Map<string, { id: string; name: string; unicode: string | null }>()
+  const rows = await db
+    .select({ id: signs.id, name: signs.name, unicode: signs.unicode, isForm: signs.isForm })
+    .from(signs)
+    .where(inArray(signs.unicode, glyphs))
+  const map = new Map<string, { id: string; name: string; unicode: string | null }>()
+  for (const r of rows.sort((a, b) => Number(a.isForm) - Number(b.isForm))) {
+    if (r.unicode && !map.has(r.unicode)) map.set(r.unicode, r)
+  }
+  return map
+}
+
+/** Entries whose native script contains the sign's glyph(s): common words by attestation first, names last. */
+export async function listEntriesWithGlyph(db: Database, glyph: string, limit = 60) {
+  return db.query.entries.findMany({
+    where: sql`${entries.nativeScript} like ${`%${escapeLike(glyph)}%`}`,
+    with: { language: true },
+    orderBy: [
+      sql`case when ${entries.partOfSpeech} = 'proper_noun' then 1 else 0 end`,
+      sql`coalesce(${entries.frequency}, 0) desc`,
+      sql`length(${entries.nativeScript})`,
+      languageOrder,
+      asc(entries.headword),
+    ],
+    limit,
+  })
+}
+
+export async function countSigns(db: Database) {
+  const [row] = await db
+    .select({
+      total: count(),
+      encoded: sql<number>`count(*) filter (where ${signs.unicode} is not null and ${signs.isForm} = false)`.mapWith(Number),
+      readings: sql<number>`(select count(*) from ${signReadings})`.mapWith(Number),
+    })
+    .from(signs)
+  return row ?? { total: 0, encoded: 0, readings: 0 }
 }

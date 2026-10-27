@@ -41,9 +41,10 @@ export const sumerian: SeedDataset = {
         { gloss: "king", domain: "society" },
         { gloss: "owner, master", domain: "society" },
       ],
-      parts: [{ ref: "lu₂", role: "head" }, { ref: "gal", role: "modifier" }],
+      parts: [{ ref: "lu", role: "head" }, { ref: "gal", role: "modifier" }],
     }),
-    word("lu₂", "person, man", {
+    word("lu", "person, man", {
+      translit: "lu₂",
       native: "𒇽",
       pos: "noun",
       definition: "Human being, person; man. As the first element of compounds: “the one who …”, e.g. lu₂-tur “child”.",
@@ -74,7 +75,8 @@ export const sumerian: SeedDataset = {
       ref: "nin[lady]",
       senses: ["lady, mistress", "queen", "(in divine names) goddess"],
     }),
-    word("ensi₂", "city ruler, governor", {
+    word("ensik", "city ruler, governor", {
+      translit: "ensi₂",
       native: "𒉺𒋼𒋛",
       pos: "noun",
       definition: "Ruler of a city-state; under the Ur III empire, the provincial governor.",
@@ -89,7 +91,8 @@ export const sumerian: SeedDataset = {
       ref: "dumu[child]",
       senses: ["child", "son", "member, citizen (in compounds)"],
     }),
-    word("dumu-munus", "daughter", {
+    word("dumumunus", "daughter", {
+      translit: "dumu-munus",
       native: "𒌉𒊩",
       pos: "noun",
       definition: "Daughter, lit. “female child”.",
@@ -103,14 +106,16 @@ export const sumerian: SeedDataset = {
       ref: "munus[woman]",
     }),
     word("ama", "mother", { native: "𒂼", pos: "noun", ref: "ama[mother]" }),
-    word("ad-da", "father", {
+    word("ad", "father", {
+      translit: "ad-da",
       native: "𒀜𒁕",
       pos: "noun",
       definition: "Father. Also written a-a.",
       ref: "ad[father]",
     }),
     word("šeš", "brother", { native: "𒋀", pos: "noun", ref: "šeš[brother]" }),
-    word("nin₉", "sister", {
+    word("nin", "sister", {
+      translit: "nin₉",
       native: "𒎐",
       pos: "noun",
       etymology: "Sign SAL.KU.",
@@ -122,21 +127,24 @@ export const sumerian: SeedDataset = {
       definition: "Spouse: wife or husband. dam … tuku “to marry”, lit. “to acquire a spouse”.",
       ref: "dam[spouse]",
     }),
-    word("dub-sar", "scribe", {
+    word("dubsar", "scribe", {
+      translit: "dub-sar",
       native: "𒁾𒊬",
       pos: "noun",
       definition: "Scribe, lit. “tablet-writer”. Loaned into Akkadian as ṭupšarru.",
       ref: "dubsar[scribe]",
       parts: [{ ref: "dub", role: "object" }, { ref: "sar", role: "verb" }],
     }),
-    word("di-kud", "judge", {
+    word("dikud", "judge", {
+      translit: "di-kud",
       native: "𒁲𒋻",
       pos: "noun",
       definition: "Judge, lit. “one who decides (cuts) legal cases”.",
       ref: "dikud[judge]",
       parts: [{ ref: "di", role: "object" }, { ref: "kud", role: "verb" }],
     }),
-    word("ur-saŋ", "hero, warrior", {
+    word("ursaŋ", "hero, warrior", {
+      translit: "ur-saŋ",
       native: "𒌨𒊕",
       pos: "noun",
       definition: "Hero, warrior; title of gods and kings.",
@@ -194,7 +202,8 @@ export const sumerian: SeedDataset = {
       definition: "Sea, lake. The same sign is read eš₃ “shrine”.",
       ref: "ab[sea]",
     }),
-    word("a-ab-ba", "sea", {
+    word("aba", "sea", {
+      translit: "a-ab-ba",
       native: "𒀀𒀊𒁀",
       pos: "noun",
       definition: "The sea, lit. “water of the sea”.",
@@ -207,27 +216,30 @@ export const sumerian: SeedDataset = {
       definition: "The cosmic fresh-water ocean beneath the earth, home of the god Enki; also a water basin in temples. Written ZU.AB; Akkadian apsû.",
       ref: "abzu[water]",
     }),
-    word("e₂", "house, temple", {
+    word("e", "house, temple", {
+      translit: "e₂",
       native: "𒂍",
       pos: "noun",
       definition: "House, dwelling; household, estate; temple (the house of a god).",
       ref: "e[house]",
       senses: ["house, dwelling", "household, estate", "temple"],
     }),
-    word("e₂-gal", "palace", {
+    word("egal", "palace", {
+      translit: "e₂-gal",
       native: "𒂍𒃲",
       pos: "noun",
       definition: "Palace, lit. “big house”. Borrowed into Akkadian as ekallu and from there into Hebrew hêḵāl “palace, temple”.",
       ref: "egal[palace]",
-      parts: [{ ref: "e₂", role: "head" }, { ref: "gal", role: "modifier" }],
+      parts: [{ ref: "e", role: "head" }, { ref: "gal", role: "modifier" }],
     }),
-    word("e₂-dub-ba-a", "scribal school", {
+    word("edubba", "scribal school", {
+      translit: "e₂-dub-ba-a",
       native: "𒂍𒁾𒁀𒀀",
       pos: "noun",
       definition: "The scribal school, the “tablet house” where cuneiform was taught.",
       etymology: "e₂ “house” + dub “tablet” + ba “to allot”: “house that distributes tablets” (one traditional analysis).",
       ref: "edubba[school]",
-      parts: ["e₂", "dub", "ba"],
+      parts: ["e", "dub", "ba"],
     }),
     word("iri", "city", {
       native: "𒌷",
@@ -235,7 +247,8 @@ export const sumerian: SeedDataset = {
       definition: "City, town. Also read uru. The sign is also a determinative before city names.",
       ref: "iri[city]",
     }),
-    word("bad₃", "city wall", {
+    word("bad", "city wall", {
+      translit: "bad₃",
       native: "𒂦",
       pos: "noun",
       definition: "City wall, fortification.",
@@ -268,7 +281,8 @@ export const sumerian: SeedDataset = {
       definition: "Hand. Very frequent in compound verbs: šu … ti “to receive”, šu … bar “to release”, šu … du₇ “to complete”.",
       ref: "šu[hand]",
     }),
-    word("ša₃", "heart, inside", {
+    word("šag", "heart, inside", {
+      translit: "ša₃",
       native: "𒊮",
       pos: "noun",
       definition: "Heart; inside, interior; womb; the middle of something.",
@@ -314,14 +328,16 @@ export const sumerian: SeedDataset = {
       definition: "Fate, destiny, lot. As a prefix it forms abstract nouns: nam-lugal “kingship”, nam-tar “fate”.",
       ref: "nam[destiny]",
     }),
-    word("nam-lugal", "kingship", {
+    word("namlugal", "kingship", {
+      translit: "nam-lugal",
       native: "𒉆𒈗",
       pos: "noun",
       definition: "Kingship, royal office; kingdom.",
       ref: "namlugal[kingship]",
       parts: [{ ref: "part:nam-", role: "affix" }, { ref: "lugal", role: "base" }],
     }),
-    word("nam-tar", "fate", {
+    word("namtar", "fate", {
+      translit: "nam-tar",
       native: "𒉆𒋻",
       pos: "noun",
       definition: "Fate, destiny, lit. “that which is decided/cut”; also the netherworld demon Namtar.",
@@ -354,7 +370,8 @@ export const sumerian: SeedDataset = {
       definition: "Month; moonlight.",
       ref: "iti[month]",
     }),
-    word("gi₆", "night; black", {
+    word("ŋi", "night; black", {
+      translit: "gi₆",
       native: "𒈪",
       pos: "noun",
       definition: "Night; (as adjective) black, dark.",
@@ -374,21 +391,24 @@ export const sumerian: SeedDataset = {
       ref: "kug[pure]",
       senses: ["pure, holy, sacred", "precious metal; silver"],
     }),
-    word("kug-babbar", "silver", {
+    word("kugbabbar", "silver", {
+      translit: "kug-babbar",
       native: "𒆬𒌓",
       pos: "noun",
       definition: "Silver, lit. “white precious metal”.",
       ref: "kugbabbar[silver]",
       parts: [{ ref: "kug", role: "head" }, { ref: "babbar", role: "modifier" }],
     }),
-    word("kug-sig₁₇", "gold", {
+    word("kugsig", "gold", {
+      translit: "kug-sig₁₇",
       native: "𒆬𒄀",
       pos: "noun",
       definition: "Gold, lit. “yellow precious metal”.",
       ref: "kugsig[gold]",
-      parts: [{ ref: "kug", role: "head" }, { ref: "sig₁₇", role: "modifier" }],
+      parts: [{ ref: "kug", role: "head" }, { ref: "sig", role: "modifier" }],
     }),
-    word("sig₁₇", "yellow", {
+    word("sig", "yellow", {
+      translit: "sig₁₇",
       native: "𒄀",
       pos: "adjective",
       definition: "Yellow, yellowish-green. Same sign as gi “reed”.",
@@ -400,7 +420,8 @@ export const sumerian: SeedDataset = {
       definition: "Strong, mighty; (read kal) precious, valuable, rare.",
       ref: "kalag[strong]",
     }),
-    word("dug₃", "good, sweet", {
+    word("dug", "good, sweet", {
+      translit: "dug₃",
       native: "𒄭",
       pos: "adjective",
       definition: "Good, sweet, pleasant. Also read du₁₀.",
@@ -426,7 +447,7 @@ export const sumerian: SeedDataset = {
       definition: "Beer, the everyday drink of Mesopotamia. Sign BI.",
       ref: "kaš[beer]",
     }),
-    word("gu₄", "ox, bull", { native: "𒄞", pos: "noun", ref: "gud[ox]" }),
+    word("gud", "ox, bull", { translit: "gu₄", native: "𒄞", pos: "noun", ref: "gud[ox]" }),
     word("udu", "sheep", { native: "𒇻", pos: "noun", ref: "udu[sheep]" }),
     word("anše", "donkey, equid", {
       native: "𒀲",
@@ -452,13 +473,15 @@ export const sumerian: SeedDataset = {
       definition: "Tree; wood; wooden object. The sign GIŠ is also the determinative before names of trees and wooden things.",
       ref: "ŋeš[tree]",
     }),
-    word("gu-za", "chair, throne", {
+    word("guza", "chair, throne", {
+      translit: "gu-za",
       native: "𒄖𒍝",
       pos: "noun",
       definition: "Chair, seat; throne. Cf. Akkadian kussû, Hebrew kissēʾ; the direction of borrowing is debated.",
       ref: "guza[chair]",
     }),
-    word("ma-na", "mina", {
+    word("mana", "mina", {
+      translit: "ma-na",
       native: "𒈠𒈾",
       pos: "noun",
       definition: "Mina, the unit of weight of 60 shekels (c. 500 g). Related to Akkadian manû “to count; mina”.",
@@ -466,7 +489,8 @@ export const sumerian: SeedDataset = {
     }),
 
     /* ── Verbs ───────────────────────────────────────────────────────── */
-    word("dug₄", "to speak, say", {
+    word("dug", "to speak, say", {
+      translit: "dug₄",
       native: "𒅗",
       pos: "verb",
       definition: "To speak, say; to do, perform (as the light verb of many compound verbs). Imperfective (marû) stem: e.",
@@ -490,7 +514,8 @@ export const sumerian: SeedDataset = {
       definition: "To stand; to set up, erect; to serve, be stationed. Same sign (DU) as ŋen “to go”.",
       ref: "gub[stand]",
     }),
-    word("du₃", "to build", {
+    word("du", "to build", {
+      translit: "du₃",
       native: "𒆕",
       pos: "verb",
       definition: "To build, construct, erect; to plant.",
@@ -502,7 +527,8 @@ export const sumerian: SeedDataset = {
       definition: "To do, make, act. Frequent as the second element of compound verbs.",
       ref: "ak[do]",
     }),
-    word("šum₂", "to give", {
+    word("šum", "to give", {
+      translit: "šum₂",
       native: "𒋧",
       pos: "verb",
       definition: "To give. Also transliterated sum.",
@@ -538,15 +564,17 @@ export const sumerian: SeedDataset = {
       definition: "To cut, cut off, separate; to decide a legal case (di … kud); to levy taxes.",
       ref: "kud[cut]",
     }),
-    word("ki-aŋ₂", "to love; beloved", {
+    word("ki aŋ", "to love; beloved", {
+      translit: "ki-aŋ₂",
       native: "𒆠𒉘",
       pos: "verb",
       definition: "To love; (as participle) beloved — a stock royal epithet, e.g. ki-aŋ₂ Inana “beloved of Inana”.",
       etymology: "Compound verb ki “place/earth” + aŋ₂ “to measure out”.",
       ref: "ki aŋ[love]",
-      parts: ["ki", "aŋ₂"],
+      parts: ["ki", "aŋ"],
     }),
-    word("aŋ₂", "to measure out", {
+    word("aŋ", "to measure out", {
+      translit: "aŋ₂",
       native: "𒉘",
       pos: "verb",
       definition: "To measure (out), mete; to weigh.",
@@ -554,20 +582,23 @@ export const sumerian: SeedDataset = {
     }),
 
     /* ── Deities (composition on display) ────────────────────────────── */
-    word("En-lil₂", "Enlil", {
+    word("Enlil", "Enlil", {
+      translit: "En-lil₂",
       native: "𒀭𒂗𒆤",
       pos: "proper_noun",
       definition: "Enlil, chief god of the Sumerian pantheon, lord of Nippur; lit. “Lord Wind/Air”.",
       ref: "Enlil[1]",
-      parts: ["en", "lil₂"],
+      parts: ["en", "lil"],
     }),
-    word("lil₂", "wind, air; spirit", {
+    word("lil", "wind, air; spirit", {
+      translit: "lil₂",
       native: "𒆤",
       pos: "noun",
       definition: "Wind, breeze, air; ghost, spirit.",
       ref: "lil[wind]",
     }),
-    word("En-ki", "Enki", {
+    word("Enki", "Enki", {
+      translit: "En-ki",
       native: "𒀭𒂗𒆠",
       pos: "proper_noun",
       definition: "Enki, god of fresh water, wisdom and crafts, lord of Eridu and of the abzu; lit. “Lord Earth”. Akkadian Ea.",
@@ -595,14 +626,16 @@ export const sumerian: SeedDataset = {
       etymology: "Written ŠEŠ.KI.",
       ref: "Nanna[1]",
     }),
-    word("Ereš-ki-gal", "Ereshkigal", {
+    word("Ereškigal", "Ereshkigal", {
+      translit: "Ereš-ki-gal",
       native: "𒀭𒎏𒆠𒃲",
       pos: "proper_noun",
       definition: "Ereshkigal, queen of the netherworld; lit. “Queen of the Great Earth (below)”.",
       ref: "Ereškigal[1]",
       parts: [{ ref: "nin", note: "read ereš “queen”" }, "ki", "gal"],
     }),
-    word("Dumu-zid", "Dumuzid (Tammuz)", {
+    word("Dumuzid", "Dumuzid (Tammuz)", {
+      translit: "Dumu-zid",
       native: "𒀭𒌉𒍣",
       pos: "proper_noun",
       definition: "Dumuzid, the shepherd god and consort of Inanna, who dies and is mourned each summer; lit. “Faithful/True Son”. Akkadian Dumuzi/Tammūzu, Hebrew Tammûz.",
@@ -613,21 +646,23 @@ export const sumerian: SeedDataset = {
     /* ── Numerals ────────────────────────────────────────────────────── */
     word("diš", "one", { native: "𒁹", pos: "numeral", definition: "One. The vertical wedge; also the determinative before male personal names.", ref: "diš[one]" }),
     word("min", "two", { native: "𒈫", pos: "numeral", ref: "min[two]" }),
-    word("eš₅", "three", { native: "𒐈", pos: "numeral", ref: "eš[three]" }),
+    word("eš", "three", { translit: "eš₅", native: "𒐈", pos: "numeral", ref: "eš[three]" }),
     word("limmu", "four", { native: "𒐉", pos: "numeral", ref: "limmu[four]" }),
-    word("ia₂", "five", { native: "𒐊", pos: "numeral", ref: "ia[five]" }),
-    word("aš₃", "six", { native: "𒐋", pos: "numeral", ref: "aš[six]" }),
+    word("ia", "five", { translit: "ia₂", native: "𒐊", pos: "numeral", ref: "ia[five]" }),
+    word("aš", "six", { translit: "aš₃", native: "𒐋", pos: "numeral", ref: "aš[six]" }),
     word("imin", "seven", { native: "𒐌", pos: "numeral", ref: "imin[seven]" }),
     word("ussu", "eight", { native: "𒐍", pos: "numeral", ref: "ussu[eight]" }),
     word("ilimmu", "nine", { native: "𒐎", pos: "numeral", ref: "ilimmu[nine]" }),
     word("u", "ten", { native: "𒌋", pos: "numeral", definition: "Ten. The Winkelhaken (corner wedge).", ref: "u[ten]" }),
-    word("ŋeš₂", "sixty", {
+    word("ŋeš", "sixty", {
+      translit: "ŋeš₂",
       native: "𒐕",
       pos: "numeral",
       definition: "Sixty, the base of the sexagesimal system; written like diš “one”, one order of magnitude up.",
       ref: "ŋeš[sixty]",
     }),
-    word("šar₂", "3600; totality", {
+    word("šar", "3600; totality", {
+      translit: "šar₂",
       native: "𒊹",
       pos: "numeral",
       definition: "3600 (60 × 60); hence “all, totality, countless”.",

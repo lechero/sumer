@@ -6,6 +6,7 @@
 import { part, word, type SeedDataset } from "../types"
 
 export const hebrew: SeedDataset = {
+  mergeMode: "fill",
   language: {
     id: "hbo",
     name: "Biblical Hebrew",

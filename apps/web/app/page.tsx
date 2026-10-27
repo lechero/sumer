@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { countEntries, listLanguages } from "@workspace/db"
+import { countEntries, countSigns, listLanguages } from "@workspace/db"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card"
 
 import { DbProblem } from "@/components/db-problem"
@@ -13,6 +13,7 @@ export default async function HomePage() {
   const result = await withDb(async (db) => ({
     languages: await listLanguages(db),
     totals: await countEntries(db),
+    signs: await countSigns(db),
   }))
 
   return (
@@ -77,6 +78,25 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {result.ok && result.data.signs.encoded > 0 ? (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold tracking-tight">Cuneiform signs</h2>
+          <Link href="/signs" className="group block">
+            <Card className="transition-colors group-hover:bg-muted/50">
+              <CardHeader>
+                <CardTitle className="flex flex-wrap items-baseline gap-x-3">
+                  <span className="font-cuneiform text-3xl font-normal leading-none" aria-hidden>𒀭𒂗𒆤 𒈗 𒆠 𒀀</span>
+                  <span>Sign list</span>
+                </CardTitle>
+                <CardDescription>
+                  {result.data.signs.encoded.toLocaleString()} encoded signs, {result.data.signs.readings.toLocaleString()} readings, from the Oracc Sign List — with every word written with each sign.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 rounded-lg border bg-muted/30 p-6 sm:grid-cols-3">
         <div>

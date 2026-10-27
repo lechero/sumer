@@ -1,13 +1,14 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { getEntryById, type EntryDetail, type RelationType } from "@workspace/db"
+import { getEntryById, getSignsForText, type EntryDetail, type RelationType } from "@workspace/db"
 import { Badge } from "@workspace/ui/components/badge"
 import { Separator } from "@workspace/ui/components/separator"
 
 import { DbProblem } from "@/components/db-problem"
 import { KindBadge, PosBadge } from "@/components/entry-badges"
 import { EntryLink } from "@/components/entry-link"
+import { GlyphBreakdown } from "@/components/glyph-breakdown"
 import { NativeText } from "@/components/native-text"
 import { UUID_RE, withDb } from "@/lib/data"
 import { RELATION_FROM_LABEL, RELATION_TO_LABEL } from "@/lib/labels"
@@ -18,14 +19,20 @@ type Props = { params: Promise<{ id: string }> }
 
 async function load(id: string) {
   if (!UUID_RE.test(id)) return { ok: true as const, data: undefined }
-  return withDb((db) => getEntryById(db, id))
+  return withDb(async (db) => {
+    const entry = await getEntryById(db, id)
+    if (!entry) return undefined
+    const signsByGlyph = entry.nativeScript ? await getSignsForText(db, entry.nativeScript) : new Map()
+    return { entry, signsByGlyph }
+  })
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const r = await load(id)
   if (!r.ok || !r.data) return { title: "Entry" }
-  return { title: `${r.data.headword} — ${r.data.gloss} (${r.data.language.name})` }
+  const e = r.data.entry
+  return { title: `${e.headword} — ${e.gloss} (${e.language.name})` }
 }
 
 function groupByType<T extends { type: RelationType }>(rows: T[]) {
@@ -47,8 +54,9 @@ export default async function EntryPage({ params }: Props) {
   const { id } = await params
   const r = await load(id)
   if (!r.ok) return <DbProblem result={r} />
-  const entry: EntryDetail | undefined = r.data
-  if (!entry) notFound()
+  const entry: EntryDetail | undefined = r.data?.entry
+  if (!entry || !r.data) notFound()
+  const signsByGlyph = r.data.signsByGlyph
 
   const lang = entry.language
   const isCuneiform = lang.script === "Xsux"
@@ -122,6 +130,12 @@ export default async function EntryPage({ params }: Props) {
           {entry.notes ? (
             <Section title="Notes">
               <p className="leading-relaxed text-muted-foreground">{entry.notes}</p>
+            </Section>
+          ) : null}
+
+          {isCuneiform && entry.nativeScript ? (
+            <Section title="Signs">
+              <GlyphBreakdown text={entry.nativeScript} signsByGlyph={signsByGlyph} />
             </Section>
           ) : null}
 

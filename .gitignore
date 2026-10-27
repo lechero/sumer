@@ -47,3 +47,6 @@ next-env.d.ts
 
 # embedded PGlite database (dev fallback when DATABASE_URL is unset)
 .pglite/
+
+# raw downloads of the importers (re-fetched on demand)
+.cache/

@@ -8,6 +8,20 @@
       "when": 1793059542117,
       "tag": "0000_slim_songbird",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793061592729,
+      "tag": "0001_gorgeous_leo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793063553584,
+      "tag": "0002_ambitious_silver_surfer",
+      "breakpoints": true
     }
   ]
 }

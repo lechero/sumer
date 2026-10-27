@@ -7,6 +7,7 @@
 import { part, word, type SeedDataset } from "../types"
 
 export const akkadian: SeedDataset = {
+  mergeMode: "fill",
   language: {
     id: "akk",
     name: "Akkadian",

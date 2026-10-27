@@ -1,0 +1,27 @@
+{
+  "name": "@workspace/importers",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "description": "Downloads open lexica and sign lists and loads them into the dictionary database.",
+  "scripts": {
+    "import": "node --import tsx src/cli.ts",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "render": "node --import tsx src/tools/render.ts"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "fflate": "^0.8.3",
+    "saxes": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "eslint": "^10",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  }
+}
