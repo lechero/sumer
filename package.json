@@ -17,7 +17,7 @@
     "docker:down": "docker compose down",
     "docker:reset": "docker compose down -v",
     "db:stats": "turbo db:stats --filter=@workspace/db",
-    "import": "pnpm --filter @workspace/importers import"
+    "import": "pnpm --filter @workspace/importers run import"
   },
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",

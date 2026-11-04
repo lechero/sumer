@@ -76,7 +76,7 @@ export function parseAsl(text: string): ParsedSign[] {
       continue
     }
     if (!sign) continue
-    if (key === "@form" || key === "@form-") {
+    if (key === "@form" || key === "@form-" || key === "@form+") {
       form = newSign(rest, true, key === "@form-")
       form.parent = sign.name
       continue
@@ -174,9 +174,11 @@ export const oslImporter: Importer = {
       sourceRef: s.oid ?? null,
     })
 
-    // Pass 1: base signs, pass 2: forms (need parent ids). Names are unique in OSL; keep the first of any duplicate.
+    // Pass 1: base signs, pass 2: forms (need parent ids). A form can share its name with a sign of its own
+    // (`@form U` under BUR₃@v, `@sign U`); the sign wins, so dedupe with base signs first, then keep the first form.
     const seen = new Set<string>()
-    const unique = list.filter((s) => (seen.has(s.name) ? false : (seen.add(s.name), true)))
+    const ordered = [...list.filter((s) => !s.isForm), ...list.filter((s) => s.isForm)]
+    const unique = ordered.filter((s) => (seen.has(s.name) ? false : (seen.add(s.name), true)))
     const bases = unique.filter((s) => !s.isForm)
     const forms = unique.filter((s) => s.isForm)
 

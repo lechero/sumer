@@ -7,7 +7,7 @@
  * Returns null when any piece has no known sign.
  */
 import { and, eq, isNull, or } from "drizzle-orm"
-import { signReadings, signs, type Database } from "@workspace/db"
+import { isFullyEncoded, signReadings, signs, type Database } from "@workspace/db"
 
 const SUB: Record<string, string> = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" }
 
@@ -67,7 +67,7 @@ export async function loadReadingMap(db: Database): Promise<ReadingMap> {
   const map: ReadingMap = new Map()
   // base signs first so a form never shadows its parent
   for (const r of [...rows].sort((a, b) => Number(a.isForm) - Number(b.isForm))) {
-    if (!r.unicode) continue
+    if (!r.unicode || !isFullyEncoded(r.unicode)) continue // OSL placeholders (X, O) must not end up in words
     const v = normalizeReading(r.value.replace(/\?$/, ""))
     if (!map.has(v)) map.set(v, r.unicode)
   }

@@ -1,5 +1,5 @@
 /**
- * pnpm import <source...> [--limit N] [--offline] [--prune] [--all]
+ * pnpm run import <source...> [--limit N] [--offline] [--prune] [--all]
  */
 import { closeDatabase, openDatabase, type Database } from "@workspace/db"
 
@@ -14,7 +14,7 @@ import { oslImporter } from "./sources/osl"
 const importers: Importer[] = [oslImporter, epsd2Importer, eblImporter, oshbImporter, lsjImporter]
 
 function usage(): never {
-  console.log("usage: pnpm import <source...> [--limit N] [--offline] [--prune] [--all]\n\nsources:")
+  console.log("usage: pnpm run import <source...> [--limit N] [--offline] [--prune] [--all]\n\nsources:")
   for (const i of importers) console.log(`  ${i.id.padEnd(10)} ${i.language.padEnd(4)} ${i.description}`)
   process.exit(1)
 }

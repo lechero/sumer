@@ -19,7 +19,9 @@ export async function withDb<T>(fn: (db: Database) => Promise<T>): Promise<DbRes
 function describeDbError(err: unknown) {
   const e = err as { code?: string; message?: string; cause?: { code?: string; message?: string } }
   const code = e?.code ?? e?.cause?.code ?? ""
-  const detail = e?.message ?? e?.cause?.message ?? String(err)
+  // Drizzle wraps driver errors as "Failed query: …"; the actual Postgres message is on `cause`.
+  const message = e?.message ?? String(err)
+  const detail = e?.cause?.message && !message.includes(e.cause.message) ? `${e.cause.message}\n\n${message}` : message
 
   if (code === "42P01" || /relation .* does not exist/i.test(detail)) {
     return {

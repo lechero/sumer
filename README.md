@@ -12,17 +12,29 @@ A monorepo for collecting and browsing the vocabulary of ancient languages: **Su
 
 ## Quick start
 
+With [Task](https://taskfile.dev) (`brew install go-task`) and Docker or Podman running:
+
+```bash
+task setup               # .env, pnpm install, Postgres up, migrations + seed, every dictionary import
+task dev                 # http://localhost:3000
+```
+
+`task setup` is re-runnable. Downloads are cached in `.cache/importers/`, so later runs only re-apply the upserts. Use `task setup -- --offline` to never touch the network. `task setup:pglite` does the same without containers. `task` lists every command, and `task doctor` shows your toolchain, the container engine and which database the scripts will use.
+
+Task uses Docker when its daemon answers, and Podman otherwise (`podman compose`, which calls `podman-compose`). Force one with `CONTAINER_ENGINE=podman task up`.
+
+The same steps by hand:
+
 ```bash
 cp .env.example .env     # Postgres settings + DATABASE_URL (optional, see below)
-docker compose up -d     # start Postgres on localhost:5432
+docker compose up -d     # or: podman compose up -d. Postgres on localhost:5432
 pnpm install
 pnpm db:setup            # run migrations, then seed the base data
+pnpm run import --all    # Oracc Sign List, ePSD2, eBL, Open Scriptures, LSJ
 pnpm dev                 # http://localhost:3000
 ```
 
-Requires Node 24 (see `.node-version`) and pnpm 12 (`corepack enable` installs the pinned version from `package.json`).
-
-**With [Task](https://taskfile.dev)** (`brew install go-task`): `task setup` does all of the above, `task setup:pglite` does it without Docker, and `task` lists every command. Tasks mirror the pnpm scripts below (`task dev`, `task db:seed`, `task import -- osl --limit 500`), install dependencies when the lockfile changes, and ask before deleting data. `task doctor` shows your toolchain and which database the scripts will use.
+Requires Node 24 (see `.node-version`) and pnpm 12 (`corepack enable` installs the pinned version from `package.json`). Tasks mirror the pnpm scripts below (`task db:seed`, `task import -- osl --limit 500`), install dependencies when the lockfile changes, and ask before deleting data.
 
 **No Docker?** Skip the `.env` (or leave `DATABASE_URL` empty). The app and the `db:*` scripts then use an embedded PGlite database stored in `./.pglite` — same schema, same data, no services. One caveat: only one process can hold a PGlite directory open, so stop `pnpm dev` before running `pnpm db:seed` / `pnpm db:stats` (Postgres has no such limit).
 
@@ -31,14 +43,14 @@ Requires Node 24 (see `.node-version`) and pnpm 12 (`corepack enable` installs t
 `packages/importers` downloads open lexica into `.cache/importers/` (git-ignored) and loads them through the same upsert as the seed, so every run is repeatable:
 
 ```bash
-pnpm import --all            # everything below, in order
-pnpm import osl epsd2        # or pick sources; add --limit 500 for a quick run, --offline to use the cache only
+pnpm run import --all        # everything below, in order
+pnpm run import osl epsd2    # or pick sources; add --limit 500 for a quick run, --offline to use the cache only
 ```
 
 | Source | Language | What you get | Licence |
 | --- | --- | --- | --- |
-| `osl` — [Oracc Sign List](https://github.com/oracc/osl) | cuneiform | 4,264 signs (3,155 base + variants) with Unicode, sign-list numbers (MZL, ABZ, LAK …) and 10,600 readings | CC0 |
-| `epsd2` — [ePSD2](http://oracc.museum.upenn.edu/epsd2/) | Sumerian | 15,940 lemmas with senses, attestation counts, compounds and Akkadian equivalents; 13k rendered in cuneiform via the sign list | CC BY-SA 3.0 |
+| `osl` — [Oracc Sign List](https://github.com/oracc/osl) | cuneiform | 4,264 signs (3,241 base + 1,023 variant forms) with Unicode, sign-list numbers (MZL, ABZ, LAK …) and 11,208 readings | CC0 |
+| `epsd2` — [ePSD2](http://oracc.museum.upenn.edu/epsd2/) | Sumerian | 15,940 lemmas with senses, attestation counts, compounds and Akkadian equivalents; 15,143 rendered in cuneiform via the sign list | CC BY-SA 3.0 |
 | `ebl` — [eBL dictionary](https://www.ebl.lmu.de/dictionary) | Akkadian | 22,263 words (CDA-based) with meanings, derivations and logograms in cuneiform | eBL terms (verify before redistributing) |
 | `oshb` — [Open Scriptures Hebrew Lexicon](https://github.com/openscriptures/HebrewLexicon) | Hebrew, Aramaic | 8,834 Hebrew + 745 Aramaic words with Strong's and BDB data, 2,000 roots linked to their derivatives | CC BY 4.0 |
 | `lsj` — [LSJ via Perseus](https://github.com/PerseusDL/lexica) | Greek | ~114k entries with senses (beta code converted to polytonic Unicode) | CC BY-SA 4.0 |
@@ -46,6 +58,19 @@ pnpm import osl epsd2        # or pick sources; add --limit 500 for a quick run,
 The ePSD2 download is a 213 MB zip whose glossary unpacks to 1.9 GB; the importer streams it. If the Oracc server's certificate cannot be verified from your network, fetch the zip by hand into `.cache/importers/epsd2/epsd2.zip` and run with `--offline`.
 
 The hand-written seed (`pnpm db:seed`) is a thin curated layer on top: it merges with ePSD2 by citation form and only fills gaps in the other languages, so it is safe to run before or after the imports.
+
+## Cuneiform fonts
+
+Cuneiform is drawn with fonts from the [Oracc Sign List](https://oracc.museum.upenn.edu/osl/OraccCuneiformFonts/), self-hosted in `apps/web/fonts/` and loaded with `next/font/local`:
+
+| File | From | Covers |
+| --- | --- | --- |
+| `oracc-noto-sans-cuneiform.woff2` (629 KB) | Oracc Noto, Google's Noto Sans Cuneiform extended by Oracc | All of Unicode cuneiform, the Archaic Cuneiform Numerals OSL uses (U+12550–1268F) and 110 OSL Private Use Area signs |
+| `oracc-{rsp,emc,gudea,lak}-extra.woff2` | Oracc RSP, EMC, Gudea and LAK, cut down to what Noto lacks | 221 more PUA signs, drawn in their Early Dynastic shapes |
+
+Each font only downloads on pages that use one of its characters (`unicode-range`). All are under the SIL Open Font License 1.1 (`apps/web/fonts/OFL.txt`). `task fonts` rebuilds them from a pinned commit of [oracc/oracc2](https://github.com/oracc/oracc2/tree/main/msc/fonts) and regenerates `apps/web/lib/cuneiform-fonts.ts` and `cuneiform-coverage.ts`. It needs [uv](https://docs.astral.sh/uv/), which installs fontTools on the fly.
+
+Of the 4,264 signs, 3,243 draw as glyphs. 803 have no code point of their own, or one no font draws yet. Those are shown through their components in a dashed frame (`|BAR×TAB|` → 𒁇×𒋰, `AL@s` → 𒀠 with `@s`). The remaining 218, mostly signs known only by a LAK number, are marked as not encoded. OSL's placeholders for unencoded parts of a compound (`X`, `O`) are drawn as empty boxes and never used to render words.
 
 ## Scripts
 
@@ -57,7 +82,7 @@ The hand-written seed (`pnpm db:seed`) is a thin curated layer on top: it merges
 | `pnpm db:seed` | Upsert the seed datasets (re-runnable) |
 | `pnpm db:generate` | Generate a migration after changing `packages/db/src/schema.ts` |
 | `pnpm db:stats` | Print counts per language and a few sample searches |
-| `pnpm import <source…>` | Download + load lexica (`--all`, `--limit N`, `--offline`, `--prune`) |
+| `pnpm run import <source…>` | Download + load lexica (`--all`, `--limit N`, `--offline`, `--prune`) |
 | `pnpm --filter @workspace/importers render "e2-gal"` | Render transliteration as cuneiform through the sign list |
 | `pnpm db:studio` | Open Drizzle Studio on the configured database |
 | `pnpm docker:up` / `docker:down` / `docker:reset` | Manage the Postgres container (`reset` deletes the volume) |
@@ -69,9 +94,10 @@ Add shadcn components from the web app: `pnpm dlx shadcn@latest add dialog -c ap
 
 ```
 apps/web/                 Next.js app (pages under app/, components/, lib/)
+  fonts/                  self-hosted Oracc cuneiform fonts (WOFF2, OFL) and build.py
 packages/ui/              shadcn/ui components, Tailwind theme (globals.css)
 packages/importers/
-  src/cli.ts              pnpm import …
+  src/cli.ts              pnpm run import …
   src/sources/*.ts        osl, epsd2, ebl, oshb, lsj
   src/lib/cuneiform.ts    transliteration → Unicode cuneiform via sign readings
 packages/db/

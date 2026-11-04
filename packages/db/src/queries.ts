@@ -1,6 +1,7 @@
 import { and, asc, count, eq, getTableColumns, ilike, inArray, isNotNull, or, sql, type SQL } from "drizzle-orm"
 
 import type { Database } from "./client"
+import { cuneiformGlyphs, isFullyEncoded, parseSignName, usesExtendedCodePoints } from "./glyphs"
 import { normalizeForSearch } from "./normalize"
 import { entries, entryComponents, languages, senses, signReadings, signs, type EntryKind } from "./schema"
 
@@ -173,23 +174,61 @@ export async function listSigns(db: Database, f: SignListFilter = {}) {
   const limit = Math.min(Math.max(f.limit ?? 120, 1), 1000)
   const offset = Math.max(f.offset ?? 0, 0)
   const q = f.q?.trim()
+  // Exact reading / name matches first. Without a query there is nothing to rank by;
+  // a constant `0` must not be emitted, since Postgres reads `order by 0` as a column position.
   const rank = q
-    ? sql`case when exists (select 1 from ${signReadings} r where r.sign_id = ${signs.id} and r.search_key = ${normalizeForSearch(q)}) then 0 when lower(${signs.name}) = ${q.toLowerCase()} then 0 else 1 end`
-    : sql`0`
+    ? [sql`case when exists (select 1 from ${signReadings} r where r.sign_id = ${signs.id} and r.search_key = ${normalizeForSearch(q)}) then 0 when lower(${signs.name}) = ${q.toLowerCase()} then 0 else 1 end`]
+    : []
   const [rows, totals] = await Promise.all([
     db.query.signs.findMany({
       where,
       with: { readings: { orderBy: [asc(signReadings.sortOrder)], limit: 6 } },
-      orderBy: [rank, asc(signs.name)],
+      orderBy: [...rank, asc(signs.name)],
       limit,
       offset,
     }),
     db.select({ total: count() }).from(signs).where(where),
   ])
-  return { rows, total: totals[0]?.total ?? 0, limit, offset }
+  // Signs that may not be drawable (unencoded, or outside the standard blocks) carry their components as a fallback.
+  const needsParts = (u: string | null) => !isFullyEncoded(u) || usesExtendedCodePoints(u)
+  const byName = await loadSignsByName(db, rows.filter((r) => needsParts(r.unicode)).flatMap((r) => componentLookupNames(r.name)))
+  return {
+    rows: rows.map((r) => ({ ...r, components: needsParts(r.unicode) ? resolveComponents(r.name, byName) : null })),
+    total: totals[0]?.total ?? 0,
+    limit,
+    offset,
+  }
 }
 
 export type SignListItem = Awaited<ReturnType<typeof listSigns>>["rows"][number]
+
+type SignRef = { name: string; unicode: string | null }
+
+/**
+ * A component of a sign name with the signs it may be drawn as: the exact name first (AL@s), then the
+ * name without modifiers (AL). Which one to draw depends on font coverage, so the app picks.
+ */
+export type SignComponent = { kind: "sign"; name: string; matches: SignRef[] } | { kind: "op"; text: string }
+
+function componentLookupNames(name: string): string[] {
+  return parseSignName(name).flatMap((p) => (p.kind === "sign" ? [p.name, p.base] : []))
+}
+
+async function loadSignsByName(db: Database, names: string[]): Promise<Map<string, SignRef>> {
+  const unique = [...new Set(names)]
+  if (!unique.length) return new Map()
+  const rows = await db.select({ name: signs.name, unicode: signs.unicode }).from(signs).where(inArray(signs.name, unique))
+  return new Map(rows.map((r) => [r.name, r]))
+}
+
+/** Match each component of `name` to the signs it may be drawn as (exact name, then without modifiers). */
+function resolveComponents(name: string, byName: Map<string, SignRef>): SignComponent[] {
+  return parseSignName(name).map((p) => {
+    if (p.kind === "op") return p
+    const matches = [byName.get(p.name), p.base !== p.name ? byName.get(p.base) : undefined].filter((s): s is SignRef => !!s)
+    return { kind: "sign", name: p.name, matches }
+  })
+}
 
 const SUBSCRIPT: Record<string, string> = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" }
 
@@ -199,7 +238,7 @@ export async function getSignByName(db: Database, name: string) {
   const candidates = [...new Set([name, subscripted, subscripted.toUpperCase(), name.toUpperCase()])]
   const row = await db.query.signs.findFirst({ where: inArray(signs.name, candidates), columns: { name: true } })
   if (!row) return undefined
-  return db.query.signs.findFirst({
+  const sign = await db.query.signs.findFirst({
     where: eq(signs.name, row.name),
     with: {
       readings: { orderBy: [asc(signReadings.sortOrder)] },
@@ -208,16 +247,19 @@ export async function getSignByName(db: Database, name: string) {
       source: true,
     },
   })
+  if (!sign) return undefined
+  // Compounds (|A.DU|) always link to their parts; other signs only when they may not be drawable (AL@s → AL).
+  const showParts = sign.name.startsWith("|") || !isFullyEncoded(sign.unicode) || usesExtendedCodePoints(sign.unicode)
+  const components = showParts ? resolveComponents(sign.name, await loadSignsByName(db, componentLookupNames(sign.name))) : null
+  return { ...sign, components }
 }
 
 export type SignDetail = NonNullable<Awaited<ReturnType<typeof getSignByName>>>
 
 /** Signs for every distinct code point in a cuneiform string, keyed by glyph. */
 export async function getSignsForText(db: Database, text: string) {
-  const glyphs = [...new Set([...text].filter((ch) => {
-    const cp = ch.codePointAt(0) ?? 0
-    return cp >= 0x12000 && cp <= 0x1254f
-  }))]
+  // Look glyphs up without their variation selectors; the signs table stores the bare code point.
+  const glyphs = [...new Set(cuneiformGlyphs(text).map((g) => String.fromCodePoint(g.codePointAt(0) ?? 0)))]
   if (!glyphs.length) return new Map<string, { id: string; name: string; unicode: string | null }>()
   const rows = await db
     .select({ id: signs.id, name: signs.name, unicode: signs.unicode, isForm: signs.isForm })

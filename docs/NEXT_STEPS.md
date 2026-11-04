@@ -10,8 +10,9 @@ This page is the working roadmap for the ancient-languages dictionary. It is ren
 - Postgres 17 via `docker-compose.yml`, configured by `.env` (copy `.env.example`). Without `DATABASE_URL` the app and scripts fall back to an embedded **PGlite** database in `./.pglite`, so everything runs with zero setup.
 - Schema: `languages`, `sources`, `entries` (kind = **word** or **part**), `senses`, `entry_components` (what an entry is built from), `entry_relations` (loans, cognates, translation equivalents across languages).
 - Seed data: Sumerian, Akkadian, Ancient Greek, Biblical Hebrew — a few hundred hand-curated words and word parts, with composition (lugal = lu + gal) and cross-language chains (egal → ekallu → הֵיכָל).
-- **Importers** (`pnpm import --all`): Oracc Sign List (4,264 signs, 10,600 readings), ePSD2 (15,940 Sumerian lemmas, 13k rendered in cuneiform, 909 compounds linked to their members, Akkadian equivalents), eBL (22,263 Akkadian words with derivations and logograms), Open Scriptures (8,834 Hebrew + 745 Aramaic words, 2,000 roots), LSJ (~114k Greek entries). ~164k entries in total.
+- **Importers** (`task import:all` or `pnpm run import --all`): Oracc Sign List (4,264 signs, 11,208 readings), ePSD2 (15,940 Sumerian lemmas, 15,143 rendered in cuneiform, 909 compounds linked to their members, Akkadian equivalents), eBL (22,263 Akkadian words with derivations and logograms), Open Scriptures (8,834 Hebrew + 745 Aramaic words, 2,000 roots), LSJ (~114k Greek entries). ~164k entries in total.
 - **Cuneiform**: a `signs` / `sign_readings` model, a transliteration → Unicode renderer (`{d}en-lil₂` → 𒀭𒂗𒆤), a sign browser (`/signs`, searchable by reading, name or glyph) and sign pages listing every word written with the sign.
+- **Glyphs**: self-hosted Oracc fonts (Oracc Noto plus RSP / EMC / Gudea / LAK gap fillers, `task fonts`) draw 3,243 of the 4,264 signs, including the OSL Private Use Area and Archaic Cuneiform Numerals. Unencoded signs are shown through their components (`|BAR×TAB|` → 𒁇×𒋰) and link to them.
 - Web app: language overview, per-language browsing (words / parts), global search that ignores diacritics, vowel points and sign indices, entry pages with components, usages, relations and a glyph-by-glyph breakdown, a JSON API at `/api/entries`.
 
 **Not done / caveats**
@@ -20,6 +21,7 @@ This page is the working roadmap for the ancient-languages dictionary. It is ren
 - LSJ senses and glosses are extracted heuristically from TEI (first `<tr>` translations); part of speech for Greek is guessed from endings and inflection notes.
 - eBL's licence must be checked before redistributing the Akkadian data; the Oracc server's TLS chain may need the ePSD2 zip to be downloaded by hand.
 - Cuneiform is shown in its standard Unicode form, which is the Neo-Assyrian sign shape; period-specific glyphs (Ur III, Old Babylonian) need a dedicated font or images.
+- 16 OSL Private Use Area code points (mostly curved numerals such as `10(U@c)`) have no glyph in any Oracc font yet; those signs fall back to their components.
 - PGlite allows a single process per data directory: stop the dev server before seeding when you are not on Postgres.
 - No tests, no CI, no auth, no editing UI yet.
 
@@ -66,7 +68,8 @@ Importer checklist:
 ### Cuneiform glyphs — next
 
 - **Sign images by period**: eBL serves photographs of each sign cut from tablets (`/api/signs/LUGAL/images`, ~hundreds of MB per sign — fetch lazily, cache thumbnails) and Fossey/Labat drawings; OSL ships sign drawings for archaic forms (`00res/images`). A `sign_images (sign_id, period, url, source, licence)` table and a strip of period forms on each sign page would show how 𒈗 looked from Uruk IV to Neo-Assyrian.
-- **Fonts per period**: Noto Sans Cuneiform renders Neo-Assyrian shapes; add a Ur III / Old Babylonian font (e.g. CuneiformComposite, Santakku) with a period switch on sign pages.
+- **Sign images for unencoded signs**: 151 of the 867 signs without Unicode have a LAK number, and OSL ships Deimel's LAK drawings (1922, public domain) in `00res/images/lak` of [oracc/osl](https://github.com/oracc/osl). Import them into a `sign_images` table and show them in the fallback frame. The other image sets there (RSP 1967, ELLES 1981, BAU and KWU 1935) come from publications that may still be under copyright.
+- **Fonts per period**: Oracc publishes OFL fonts per period in [oracc/oracc2](https://github.com/oracc/oracc2/tree/main/msc/fonts): LAK and RSP (Early Dynastic), Gudea and EMC, OB-Freie (Old Babylonian) and Nabuninuaihsus (Neo-Assyrian). `apps/web/fonts/build.py` already fetches four of them; add a period switch on sign pages that shows a sign in each.
 - **Sign search by shape**: wedge-count / Gottstein codes from OSL (`@sys`) for "what is this sign?" lookups.
 - **Numbers**: the numeric block (𒐈, 𒐕 …) as a dedicated numeral table with sexagesimal values.
 
@@ -86,7 +89,7 @@ Importer checklist:
 - **Browse by root / sign**: Semitic roots → derived words; cuneiform signs → readings → words.
 - **Editing UI** with server actions and validation (zod is already in the workspace), behind auth; drafts and review.
 - **Export**: JSON, CSV and TEI Lex-0 per language; the `/api/entries` route is the seed of a public API — add pagination links, filtering by part kind, and `/api/languages`.
-- **Fonts**: bundle Noto Sans Cuneiform and Noto Serif Hebrew locally instead of loading from Google Fonts; add a period-specific cuneiform font.
+- **Fonts**: cuneiform is self-hosted; bundle Noto Serif Hebrew and Noto Serif locally too instead of loading them from Google Fonts.
 - **UI polish**: keyboard-first search with instant results, virtual keyboard for Greek / Hebrew input, dark-mode review, mobile layout for the entry page.
 
 ## 5. Engineering

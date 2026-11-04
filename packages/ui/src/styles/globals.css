@@ -131,7 +131,8 @@
 }
 /* Script-specific font stacks: font-cuneiform, font-hebrew, font-greek utilities. */
 @theme {
-    --font-cuneiform: "Noto Sans Cuneiform", "Segoe UI Historic", sans-serif;
+    /* --font-cuneiform-web: Oracc Noto + gap fillers, set by apps/web (lib/cuneiform-fonts.ts). */
+    --font-cuneiform: var(--font-cuneiform-web, "Noto Sans Cuneiform"), "Noto Sans Cuneiform", "Segoe UI Historic", sans-serif;
     --font-hebrew: "Noto Serif Hebrew", "SBL Hebrew", "Ezra SIL", "Times New Roman", serif;
     --font-greek: "Noto Serif", "Gentium Plus", "Palatino Linotype", "Times New Roman", serif;
 }

@@ -5,6 +5,21 @@
 # Each task wraps the pnpm/turbo script of the same name, so both keep working.
 version: "3"
 
+vars:
+  # Container engine for Postgres: Docker when its daemon answers, else Podman.
+  # Override with CONTAINER_ENGINE=docker|podman.
+  ENGINE:
+    sh: |
+      if [ -n "${CONTAINER_ENGINE:-}" ]; then echo "$CONTAINER_ENGINE"
+      elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then echo docker
+      elif command -v podman >/dev/null 2>&1; then echo podman
+      else echo docker; fi
+  COMPOSE: "{{.ENGINE}} compose"
+
+env:
+  # Silences podman's ">>>> Executing external compose provider" banner.
+  PODMAN_COMPOSE_WARNING_LOGS: "false"
+
 tasks:
   default:
     silent: true
@@ -14,21 +29,23 @@ tasks:
   # ── Setup ────────────────────────────────────────────────────────────────────
 
   setup:
-    desc: First-time setup with Postgres in Docker (.env, install, start Postgres, migrate + seed)
+    desc: "Everything, with Postgres in Docker or Podman: .env, install, start Postgres, migrate + seed, import every dictionary (task setup -- --offline)"
     cmds:
       - task: env
       - task: install
       - task: docker:up
       - task: db:setup
+      - task: import:all
 
   setup:pglite:
-    desc: First-time setup without Docker, using the embedded PGlite database in ./.pglite
+    desc: "Everything without containers, using the embedded PGlite database in ./.pglite (task setup:pglite -- --offline)"
     preconditions:
       - sh: '! grep -qs "^DATABASE_URL=." .env'
         msg: ".env sets DATABASE_URL, so the scripts would use Postgres. Clear it, or run `task setup` instead."
     cmds:
       - task: install
       - task: db:setup
+      - task: import:all
 
   env:
     desc: Create .env from .env.example if it does not exist yet
@@ -61,8 +78,10 @@ tasks:
     cmds:
       - 'echo "node    $(node --version 2>/dev/null || echo missing)  (wants v$(cat .node-version))"'
       - 'echo "pnpm    $(pnpm --version 2>/dev/null || echo "missing, run: corepack enable")"'
-      - 'echo "docker  $(docker compose version --short 2>/dev/null || echo "missing (optional, PGlite works without it)")"'
+      - 'echo "engine  {{.ENGINE}}: $({{.ENGINE}} --version 2>/dev/null || echo "missing (optional, PGlite works without it)")"'
+      - 'echo "compose $({{.COMPOSE}} version 2>/dev/null | tail -1 || echo missing)"'
       - 'echo "db      $(grep -qs "^DATABASE_URL=." .env && echo "Postgres (DATABASE_URL in .env)" || echo "PGlite (./.pglite)")"'
+      - 'echo "cache   $(du -sh .cache/importers 2>/dev/null | cut -f1 || echo empty) in .cache/importers"'
 
   # ── App ──────────────────────────────────────────────────────────────────────
 
@@ -85,6 +104,14 @@ tasks:
     interactive: true
     cmds:
       - pnpm --filter web start
+
+  fonts:
+    desc: Rebuild the self-hosted cuneiform web fonts in apps/web/fonts from Oracc's OFL fonts (needs uv)
+    preconditions:
+      - sh: command -v uv
+        msg: "uv not found. Install it with `brew install uv`; the script fetches fontTools itself."
+    cmds:
+      - uv run apps/web/fonts/build.py
 
   ui:add:
     desc: "Add shadcn components to packages/ui (task ui:add -- dialog tabs)"
@@ -171,7 +198,7 @@ tasks:
     desc: Open psql inside the Postgres container
     interactive: true
     cmds:
-      - docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+      - "{{.COMPOSE}} exec postgres sh -c 'psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"'"
 
   pglite:reset:
     desc: Delete the embedded PGlite database in ./.pglite and set it up again
@@ -180,31 +207,33 @@ tasks:
       - rm -rf .pglite
       - task: db:setup
 
-  # ── Docker ───────────────────────────────────────────────────────────────────
+  # ── Containers (Docker or Podman, see ENGINE above) ──────────────────────────
 
   docker:up:
-    desc: Start Postgres and wait until it is healthy
+    desc: Start Postgres (Docker or Podman) and wait until it is healthy
+    aliases: [up]
     preconditions:
-      - sh: docker info >/dev/null 2>&1
-        msg: "Docker is not running. Start it, or use PGlite instead (`task setup:pglite`)."
+      - sh: "{{.ENGINE}} info >/dev/null 2>&1"
+        msg: "{{.ENGINE}} is not running. Start it (`podman machine start`, or Docker Desktop / Rancher), or use PGlite instead (`task setup:pglite`)."
     cmds:
-      - docker compose up -d --wait
+      - "{{.COMPOSE}} up -d --wait"
 
   docker:down:
     desc: Stop the Postgres container (data is kept)
+    aliases: [down]
     cmds:
-      - docker compose down
+      - "{{.COMPOSE}} down"
 
   docker:reset:
     desc: Stop Postgres and delete its volume
     prompt: This deletes the Postgres volume and every row in it. Continue?
     cmds:
-      - docker compose down -v
+      - "{{.COMPOSE}} down -v"
 
   docker:logs:
     desc: Follow the Postgres container logs
     cmds:
-      - docker compose logs -f postgres
+      - "{{.COMPOSE}} logs -f postgres"
 
   # ── Dictionaries ─────────────────────────────────────────────────────────────
 
@@ -212,13 +241,13 @@ tasks:
     desc: "Download and load lexica (task import -- osl epsd2 [--limit N] [--offline] [--prune])"
     deps: [install]
     cmds:
-      - pnpm import {{.CLI_ARGS}}
+      - pnpm run import {{.CLI_ARGS}}
 
   import:all:
     desc: "Run every importer in order (task import:all -- --offline)"
     deps: [install]
     cmds:
-      - pnpm import --all {{.CLI_ARGS}}
+      - pnpm run import --all {{.CLI_ARGS}}
 
   render:
     desc: 'Render transliterations as cuneiform (task render -- e2-gal "{d}en-lil2")'

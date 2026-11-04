@@ -8,6 +8,7 @@ import { cn } from "@workspace/ui/lib/utils"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
 import { ThemeProvider } from "@/components/theme-provider"
+import { cuneiformFontFamily } from "@/lib/cuneiform-fonts"
 
 export const metadata: Metadata = {
   title: { default: "Sumer · ancient languages dictionary", template: "%s · Sumer" },
@@ -21,15 +22,17 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       lang="en"
       suppressHydrationWarning
       className={cn("antialiased font-sans", GeistSans.variable, GeistMono.variable)}
+      // Self-hosted Oracc cuneiform fonts (lib/cuneiform-fonts.ts); fetched only for pages with cuneiform.
+      style={{ "--font-cuneiform-web": cuneiformFontFamily } as React.CSSProperties}
     >
       <head>
-        {/* Cuneiform and pointed Hebrew need fonts most systems lack. Loaded at runtime (not through next/font) so builds work offline. */}
+        {/* Pointed Hebrew and polytonic Greek need fonts most systems lack. Loaded at runtime (not through next/font) so builds work offline. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Cuneiform&family=Noto+Serif+Hebrew:wght@400;600&family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Noto+Serif+Hebrew:wght@400;600&family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap"
         />
       </head>
       <body className="flex min-h-svh flex-col">

@@ -2,10 +2,12 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getSignByName, listEntriesWithGlyph } from "@workspace/db"
+import { isFullyEncoded } from "@workspace/db/glyphs"
 import { Badge } from "@workspace/ui/components/badge"
 
 import { DbProblem } from "@/components/db-problem"
 import { EntryTable } from "@/components/entry-table"
+import { drawnMatch, isDrawable, SignFace } from "@/components/sign-face"
 import { signHref } from "@/components/sign-tile"
 import { withDb } from "@/lib/data"
 
@@ -41,7 +43,7 @@ export default async function SignPage({ params }: Props) {
   const result = await withDb(async (db) => {
     const sign = await getSignByName(db, name)
     if (!sign) return null
-    const usedIn = sign.unicode ? await listEntriesWithGlyph(db, sign.unicode, 80) : []
+    const usedIn = isFullyEncoded(sign.unicode) ? await listEntriesWithGlyph(db, sign.unicode!, 80) : []
     return { sign, usedIn }
   })
   if (!result.ok) return <DbProblem result={result} />
@@ -65,11 +67,11 @@ export default async function SignPage({ params }: Props) {
           ) : null}
         </p>
         <div className="flex flex-wrap items-end gap-8">
-          <div className="font-cuneiform text-[9rem] leading-none" lang="sux">
-            {sign.unicode ?? <span className="text-muted-foreground">·</span>}
+          <div className="max-w-full text-[5rem] leading-none break-all sm:text-[9rem]" lang="sux">
+            <SignFace unicode={sign.unicode} components={sign.components} />
           </div>
-          <div className="space-y-2">
-            <h1 className="font-mono text-3xl font-semibold tracking-tight">{sign.name}</h1>
+          <div className="min-w-0 max-w-full space-y-2">
+            <h1 className="font-mono text-2xl font-semibold tracking-tight break-all sm:text-3xl">{sign.name}</h1>
             {sign.unicodeName ? <p className="text-muted-foreground">{sign.unicodeName}</p> : null}
             <div className="flex flex-wrap gap-1">
               {sign.codepoints?.map((cp) => (
@@ -77,7 +79,11 @@ export default async function SignPage({ params }: Props) {
               ))}
               {sign.unicodeVersion ? <Badge variant="secondary">Unicode {sign.unicodeVersion}</Badge> : null}
               {sign.isForm ? <Badge variant="secondary">variant form</Badge> : null}
-              {!sign.unicode ? <Badge variant="secondary">not encoded</Badge> : null}
+              {!isFullyEncoded(sign.unicode) ? (
+                <Badge variant="secondary">{sign.unicode?.trim() ? "partly encoded" : "not encoded"}</Badge>
+              ) : !isDrawable(sign.unicode) ? (
+                <Badge variant="secondary">no font glyph yet</Badge>
+              ) : null}
             </div>
             {sign.aliases?.length ? <p className="text-sm text-muted-foreground">Also called {sign.aliases.join(", ")}</p> : null}
           </div>
@@ -123,6 +129,45 @@ export default async function SignPage({ params }: Props) {
             ) : null}
           </section>
 
+          {sign.components?.some((c) => c.kind === "sign") ? (
+            <section className="space-y-3">
+              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Components</h2>
+              <ol className="flex flex-wrap items-center gap-2">
+                {sign.components.map((c, i) => {
+                  if (c.kind === "op") return <li key={i} className="font-mono text-sm text-muted-foreground">{c.text}</li>
+                  // Link to the component itself when it is in the sign list; draw it as its base sign if it has no glyph.
+                  const target = c.matches[0]
+                  const drawn = drawnMatch(c)
+                  const approximate = drawn && drawn.name !== c.name
+                  return (
+                    <li key={i}>
+                      {target ? (
+                        <Link
+                          href={signHref(target.name)}
+                          className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-sm hover:bg-muted"
+                          title={approximate ? `${c.name} has no glyph of its own; drawn as ${drawn.name}` : undefined}
+                        >
+                          <span className="text-2xl leading-none"><SignFace unicode={drawn?.unicode ?? target.unicode} /></span>
+                          <span className="font-mono text-xs">{c.name}</span>
+                          {approximate ? <span className="text-xs text-muted-foreground">≈ {drawn.name}</span> : null}
+                        </Link>
+                      ) : (
+                        <span className="inline-flex items-center rounded-md border border-dashed px-2 py-1 font-mono text-xs text-muted-foreground">{c.name}</span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ol>
+              {!isDrawable(sign.unicode) ? (
+                <p className="text-xs text-muted-foreground">
+                  {isFullyEncoded(sign.unicode)
+                    ? "None of the bundled Oracc fonts draws this code point yet, so the sign is shown through its components."
+                    : "This sign has no Unicode code point of its own, so it is shown through its components."}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
           {sign.forms.length ? (
             <section className="space-y-3">
               <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Variant forms</h2>
@@ -130,7 +175,7 @@ export default async function SignPage({ params }: Props) {
                 {sign.forms.map((f) => (
                   <li key={f.id}>
                     <Link href={signHref(f.name)} className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-sm hover:bg-muted">
-                      <span className="font-cuneiform text-2xl leading-none">{f.unicode ?? "·"}</span>
+                      <span className="text-2xl leading-none"><SignFace unicode={f.unicode} /></span>
                       <span className="font-mono text-xs">{f.name}</span>
                     </Link>
                   </li>

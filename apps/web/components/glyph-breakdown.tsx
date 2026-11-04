@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { cuneiformGlyphs } from "@workspace/db/glyphs"
 
 import { signHref } from "@/components/sign-tile"
 
@@ -6,19 +7,17 @@ type SignRef = { id: string; name: string; unicode: string | null }
 
 /** Each cuneiform glyph of a string, linked to its sign page. */
 export function GlyphBreakdown({ text, signsByGlyph }: { text: string; signsByGlyph: Map<string, SignRef> }) {
-  const glyphs = [...text].filter((ch) => {
-    const cp = ch.codePointAt(0) ?? 0
-    return cp >= 0x12000 && cp <= 0x1254f
-  })
+  const glyphs = cuneiformGlyphs(text)
   if (!glyphs.length) return null
   return (
     <ol className="flex flex-wrap gap-2">
       {glyphs.map((g, i) => {
-        const sign = signsByGlyph.get(g)
+        const cp = g.codePointAt(0) ?? 0
+        const sign = signsByGlyph.get(String.fromCodePoint(cp))
         const inner = (
           <>
             <span className="font-cuneiform text-3xl leading-none">{g}</span>
-            <span className="font-mono text-[11px] text-muted-foreground">{sign?.name ?? `U+${(g.codePointAt(0) ?? 0).toString(16).toUpperCase()}`}</span>
+            <span className="font-mono text-[11px] text-muted-foreground">{sign?.name ?? `U+${cp.toString(16).toUpperCase()}`}</span>
           </>
         )
         return (
