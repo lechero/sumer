@@ -163,7 +163,8 @@ export function convertEpsd2(e: Epsd2Entry, readings: ReadingMap): SeedEntry | n
   }
 
   const senses = (e.senses ?? [])
-    .map((s) => ({ gloss: (s.mng ?? "").trim(), num: s.num ?? "", n: count(s) }))
+    // names number their senses inside the meaning ("1, mythical king of Sippar")
+    .map((s) => ({ gloss: (s.mng ?? "").trim().replace(/^\d+,\s*/, ""), num: s.num ?? "", n: count(s) }))
     .filter((s) => s.gloss && !/^\d+$/.test(s.gloss))
   const gloss = gw || senses[0]?.gloss || (entity ? `${entity}: ${cf}` : cf)
 

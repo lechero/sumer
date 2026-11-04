@@ -4,6 +4,7 @@ import { listEntries, listLanguages, type EntryKind } from "@workspace/db"
 import { DbProblem } from "@/components/db-problem"
 import { EntryTable } from "@/components/entry-table"
 import { SearchForm } from "@/components/search-form"
+import { cuneiformBreakdowns } from "@/lib/breakdowns"
 import { first, withDb } from "@/lib/data"
 
 export const dynamic = "force-dynamic"
@@ -18,10 +19,14 @@ export default async function SearchPage({ searchParams }: Props) {
   const kindParam = first(sp.kind)
   const kind: EntryKind | undefined = kindParam === "word" || kindParam === "part" ? kindParam : undefined
 
-  const result = await withDb(async (db) => ({
-    languages: await listLanguages(db),
-    list: q ? await listEntries(db, { q, languageId: lang, kind, limit: 200 }) : null,
-  }))
+  const result = await withDb(async (db) => {
+    const list = q ? await listEntries(db, { q, languageId: lang, kind, limit: 200 }) : null
+    return {
+      languages: await listLanguages(db),
+      list,
+      breakdowns: list ? await cuneiformBreakdowns(db, list.rows) : undefined,
+    }
+  })
 
   return (
     <div className="space-y-8">
@@ -50,7 +55,7 @@ export default async function SearchPage({ searchParams }: Props) {
             {result.data.list!.total.toLocaleString()} result{result.data.list!.total === 1 ? "" : "s"} for “{q}”
             {lang ? ` in ${result.data.languages.find((l) => l.id === lang)?.name ?? lang}` : ""}
           </p>
-          <EntryTable rows={result.data.list!.rows} emptyMessage={`Nothing matches “${q}”.`} />
+          <EntryTable rows={result.data.list!.rows} breakdowns={result.data.breakdowns} emptyMessage={`Nothing matches “${q}”.`} />
         </section>
       )}
     </div>

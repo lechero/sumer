@@ -7,6 +7,7 @@ import { cn } from "@workspace/ui/lib/utils"
 
 import { DbProblem } from "@/components/db-problem"
 import { EntryTable } from "@/components/entry-table"
+import { cuneiformBreakdowns } from "@/lib/breakdowns"
 import { NativeText } from "@/components/native-text"
 import { SearchForm } from "@/components/search-form"
 import { first, withDb } from "@/lib/data"
@@ -41,12 +42,12 @@ export default async function LanguagePage({ params, searchParams }: Props) {
     const language = await getLanguage(db, id)
     if (!language) return null
     const list = await listEntries(db, { languageId: id, kind, q, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE })
-    return { language, list }
+    return { language, list, breakdowns: await cuneiformBreakdowns(db, list.rows) }
   })
 
   if (!result.ok) return <DbProblem result={result} />
   if (!result.data) notFound()
-  const { language, list } = result.data
+  const { language, list, breakdowns } = result.data
   const pageCount = Math.max(1, Math.ceil(list.total / PAGE_SIZE))
 
   const tabHref = (k?: EntryKind) => {
@@ -117,7 +118,7 @@ export default async function LanguagePage({ params, searchParams }: Props) {
         </p>
       </div>
 
-      <EntryTable rows={list.rows} showLanguage={false} emptyMessage={q ? `Nothing in ${language.name} matches “${q}”.` : "No entries yet."} />
+      <EntryTable rows={list.rows} breakdowns={breakdowns} showLanguage={false} emptyMessage={q ? `Nothing in ${language.name} matches “${q}”.` : "No entries yet."} />
 
       {pageCount > 1 ? (
         <div className="flex items-center justify-between text-sm">

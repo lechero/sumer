@@ -106,12 +106,13 @@ tasks:
       - pnpm --filter web start
 
   fonts:
-    desc: Rebuild the self-hosted cuneiform web fonts in apps/web/fonts from Oracc's OFL fonts (needs uv)
+    desc: Rebuild the self-hosted web fonts in apps/web/fonts (cuneiform from Oracc, the other scripts from Noto, UniHieroglyphica, PCSL; needs uv)
     preconditions:
       - sh: command -v uv
         msg: "uv not found. Install it with `brew install uv`; the script fetches fontTools itself."
     cmds:
       - uv run apps/web/fonts/build.py
+      - uv run apps/web/fonts/build_scripts.py
 
   ui:add:
     desc: "Add shadcn components to packages/ui (task ui:add -- dialog tabs)"

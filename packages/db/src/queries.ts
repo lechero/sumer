@@ -1,9 +1,9 @@
 import { and, asc, count, eq, getTableColumns, ilike, inArray, isNotNull, or, sql, type SQL } from "drizzle-orm"
 
 import type { Database } from "./client"
-import { cuneiformGlyphs, isFullyEncoded, parseSignName, usesExtendedCodePoints } from "./glyphs"
+import { cuneiformGlyphs, isFullyEncoded, isHieroglyphCodePoint, parseSignName, usesExtendedCodePoints } from "./glyphs"
 import { normalizeForSearch } from "./normalize"
-import { entries, entryComponents, languages, senses, signReadings, signs, type EntryKind } from "./schema"
+import { entries, entryComponents, languages, scripts, senses, signReadings, signs, type EntryKind } from "./schema"
 
 function escapeLike(s: string): string {
   return s.replace(/[\\%_]/g, (c) => `\\${c}`)
@@ -144,15 +144,56 @@ export async function countEntries(db: Database) {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Cuneiform signs
+ * Scripts and their signs
  * ────────────────────────────────────────────────────────────────────────── */
 
-export type SignListFilter = { q?: string; limit?: number; offset?: number; encodedOnly?: boolean; formsToo?: boolean }
+/** Every script with its sign counts, in display order. */
+export async function listScripts(db: Database) {
+  return db
+    .select({
+      ...getTableColumns(scripts),
+      signCount: sql<number>`count(${signs.id}) filter (where ${signs.isForm} = false)`.mapWith(Number),
+      formCount: sql<number>`count(${signs.id}) filter (where ${signs.isForm})`.mapWith(Number),
+      encodedCount: sql<number>`count(${signs.id}) filter (where ${signs.unicode} is not null and ${signs.isForm} = false)`.mapWith(Number),
+      sample: sql<string | null>`string_agg(${signs.unicode}, '' order by coalesce(${signs.sortOrder}, 0), ${signs.name}) filter (where ${signs.isForm} = false and char_length(${signs.unicode}) = 1)`,
+    })
+    .from(scripts)
+    .leftJoin(signs, eq(signs.scriptId, scripts.id))
+    .groupBy(scripts.id)
+    .orderBy(asc(scripts.sortOrder), asc(scripts.name))
+}
+
+export type ScriptWithCounts = Awaited<ReturnType<typeof listScripts>>[number]
+
+export async function getScript(db: Database, id: string) {
+  return db.query.scripts.findFirst({ where: eq(scripts.id, id) })
+}
+
+/** The categories of a script's signs (Gardiner classes, letter / numeral …) with counts, in sign order. */
+export async function listSignCategories(db: Database, scriptId: string) {
+  return db
+    .select({ category: signs.category, n: count() })
+    .from(signs)
+    .where(and(eq(signs.scriptId, scriptId), eq(signs.isForm, false), isNotNull(signs.category)))
+    .groupBy(signs.category)
+    .orderBy(sql`min(coalesce(${signs.sortOrder}, 0))`, asc(signs.category))
+}
+
+export type SignListFilter = {
+  script?: string
+  q?: string
+  category?: string
+  limit?: number
+  offset?: number
+  encodedOnly?: boolean
+  formsToo?: boolean
+}
 
 function signFilter(f: SignListFilter): SQL | undefined {
-  const conds: SQL[] = []
+  const conds: SQL[] = [eq(signs.scriptId, f.script ?? "cuneiform")]
   if (f.encodedOnly !== false) conds.push(isNotNull(signs.unicode))
   if (!f.formsToo) conds.push(eq(signs.isForm, false))
+  if (f.category) conds.push(eq(signs.category, f.category))
   const q = f.q?.trim()
   if (q) {
     const key = normalizeForSearch(q)
@@ -162,15 +203,18 @@ function signFilter(f: SignListFilter): SQL | undefined {
       ilike(signs.name, like),
       sql`${signs.unicode} like ${like}`,
       ilike(signs.unicodeName, like),
+      ilike(signs.description, like),
+      sql`array_to_string(${signs.aliases}, ' ') ilike ${like}`,
       readingMatch
     )
     if (c) conds.push(c)
   }
-  return conds.length ? and(...conds) : undefined
+  return and(...conds)
 }
 
 export async function listSigns(db: Database, f: SignListFilter = {}) {
   const where = signFilter(f)
+  const script = f.script ?? "cuneiform"
   const limit = Math.min(Math.max(f.limit ?? 120, 1), 1000)
   const offset = Math.max(f.offset ?? 0, 0)
   const q = f.q?.trim()
@@ -183,15 +227,16 @@ export async function listSigns(db: Database, f: SignListFilter = {}) {
     db.query.signs.findMany({
       where,
       with: { readings: { orderBy: [asc(signReadings.sortOrder)], limit: 6 } },
-      orderBy: [...rank, asc(signs.name)],
+      // Scripts with a traditional order (alphabets, Gardiner's list) keep it; sign lists sort by name.
+      orderBy: [...rank, sql`${signs.sortOrder} asc nulls last`, asc(signs.name)],
       limit,
       offset,
     }),
     db.select({ total: count() }).from(signs).where(where),
   ])
   // Signs that may not be drawable (unencoded, or outside the standard blocks) carry their components as a fallback.
-  const needsParts = (u: string | null) => !isFullyEncoded(u) || usesExtendedCodePoints(u)
-  const byName = await loadSignsByName(db, rows.filter((r) => needsParts(r.unicode)).flatMap((r) => componentLookupNames(r.name)))
+  const needsParts = (u: string | null) => composite(script) && (!isFullyEncoded(u) || usesExtendedCodePoints(u))
+  const byName = await loadSignsByName(db, script, rows.filter((r) => needsParts(r.unicode)).flatMap((r) => componentLookupNames(r.name)))
   return {
     rows: rows.map((r) => ({ ...r, components: needsParts(r.unicode) ? resolveComponents(r.name, byName) : null })),
     total: totals[0]?.total ?? 0,
@@ -201,6 +246,11 @@ export async function listSigns(db: Database, f: SignListFilter = {}) {
 }
 
 export type SignListItem = Awaited<ReturnType<typeof listSigns>>["rows"][number]
+
+/** Scripts whose sign names describe how a sign is built (|A×EN|, AL@s), so components can stand in for missing glyphs. */
+function composite(script: string) {
+  return script === "cuneiform" || script === "proto-cuneiform"
+}
 
 type SignRef = { name: string; unicode: string | null }
 
@@ -214,10 +264,13 @@ function componentLookupNames(name: string): string[] {
   return parseSignName(name).flatMap((p) => (p.kind === "sign" ? [p.name, p.base] : []))
 }
 
-async function loadSignsByName(db: Database, names: string[]): Promise<Map<string, SignRef>> {
+async function loadSignsByName(db: Database, script: string, names: string[]): Promise<Map<string, SignRef>> {
   const unique = [...new Set(names)]
   if (!unique.length) return new Map()
-  const rows = await db.select({ name: signs.name, unicode: signs.unicode }).from(signs).where(inArray(signs.name, unique))
+  const rows = await db
+    .select({ name: signs.name, unicode: signs.unicode })
+    .from(signs)
+    .where(and(eq(signs.scriptId, script), inArray(signs.name, unique)))
   return new Map(rows.map((r) => [r.name, r]))
 }
 
@@ -232,39 +285,59 @@ function resolveComponents(name: string, byName: Map<string, SignRef>): SignComp
 
 const SUBSCRIPT: Record<string, string> = { "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" }
 
-/** Accepts the Oracc name as written (E₂, |SAL.TUG₂|) or typed plainly (E2, e2, sal.tug2). */
-export async function getSignByName(db: Database, name: string) {
+/** Accepts the name as written (E₂, |SAL.TUG₂|, A1) or typed plainly (E2, e2, sal.tug2, a1). */
+export async function getSignByName(db: Database, script: string, name: string) {
   const subscripted = name.replace(/(\D)(\d+)/g, (_, a: string, d: string) => a + [...d].map((c) => SUBSCRIPT[c] ?? c).join(""))
-  const candidates = [...new Set([name, subscripted, subscripted.toUpperCase(), name.toUpperCase()])]
-  const row = await db.query.signs.findFirst({ where: inArray(signs.name, candidates), columns: { name: true } })
+  const candidates = [...new Set([name, name.toUpperCase(), ...(composite(script) ? [subscripted, subscripted.toUpperCase()] : [])])]
+  const inScript = (c: SQL) => and(eq(signs.scriptId, script), c)
+  const row =
+    (await db.query.signs.findFirst({ where: inScript(inArray(signs.name, candidates)), columns: { name: true } })) ??
+    (await db.query.signs.findFirst({ where: inScript(ilike(signs.name, escapeLike(name))), columns: { name: true } }))
   if (!row) return undefined
   const sign = await db.query.signs.findFirst({
-    where: eq(signs.name, row.name),
+    where: inScript(eq(signs.name, row.name)),
     with: {
       readings: { orderBy: [asc(signReadings.sortOrder)] },
       parent: true,
       forms: { orderBy: [asc(signs.name)] },
       source: true,
+      script: true,
     },
   })
   if (!sign) return undefined
   // Compounds (|A.DU|) always link to their parts; other signs only when they may not be drawable (AL@s → AL).
-  const showParts = sign.name.startsWith("|") || !isFullyEncoded(sign.unicode) || usesExtendedCodePoints(sign.unicode)
-  const components = showParts ? resolveComponents(sign.name, await loadSignsByName(db, componentLookupNames(sign.name))) : null
-  return { ...sign, components }
+  const showParts =
+    composite(script) && (sign.name.startsWith("|") || !isFullyEncoded(sign.unicode) || usesExtendedCodePoints(sign.unicode))
+  const components = showParts ? resolveComponents(sign.name, await loadSignsByName(db, script, componentLookupNames(sign.name))) : null
+  // Neighbours in the script's order, for previous / next links.
+  const order = sql`coalesce(${signs.sortOrder}, 0)`
+  const here = sql`(${order}, ${signs.name})`
+  const pos = sql`(${sign.sortOrder ?? 0}, ${sign.name})`
+  const base = and(eq(signs.scriptId, script), eq(signs.isForm, false), isNotNull(signs.unicode))
+  const [prev, next] = await Promise.all([
+    db.query.signs.findFirst({ where: and(base, sql`${here} < ${pos}`), orderBy: [sql`${order} desc`, sql`${signs.name} desc`], columns: { name: true, unicode: true } }),
+    db.query.signs.findFirst({ where: and(base, sql`${here} > ${pos}`), orderBy: [sql`${order} asc`, asc(signs.name)], columns: { name: true, unicode: true } }),
+  ])
+  return { ...sign, components, prev: prev ?? null, next: next ?? null }
 }
 
 export type SignDetail = NonNullable<Awaited<ReturnType<typeof getSignByName>>>
 
-/** Signs for every distinct code point in a cuneiform string, keyed by glyph. */
-export async function getSignsForText(db: Database, text: string) {
-  // Look glyphs up without their variation selectors; the signs table stores the bare code point.
-  const glyphs = [...new Set(cuneiformGlyphs(text).map((g) => String.fromCodePoint(g.codePointAt(0) ?? 0)))]
+/** The glyphs of a text that belong to a script with a sign list (cuneiform, hieroglyphs), without variation selectors. */
+function scriptGlyphs(text: string, script: string): string[] {
+  if (script === "cuneiform") return cuneiformGlyphs(text).map((g) => String.fromCodePoint(g.codePointAt(0) ?? 0))
+  if (script === "egyptian-hieroglyphs") return [...text].filter((ch) => isHieroglyphCodePoint(ch.codePointAt(0) ?? 0))
+  return []
+}
+
+/** Signs for every distinct glyph of a cuneiform or hieroglyphic string, keyed by glyph. */
+export async function getSignsForText(db: Database, text: string, script = "cuneiform") {
+  const glyphs = [...new Set(scriptGlyphs(text, script))]
   if (!glyphs.length) return new Map<string, { id: string; name: string; unicode: string | null }>()
   const rows = await db
     .select({ id: signs.id, name: signs.name, unicode: signs.unicode, isForm: signs.isForm })
     .from(signs)
-    .where(inArray(signs.unicode, glyphs))
+    .where(and(eq(signs.scriptId, script), inArray(signs.unicode, glyphs)))
   const map = new Map<string, { id: string; name: string; unicode: string | null }>()
   for (const r of rows.sort((a, b) => Number(a.isForm) - Number(b.isForm))) {
     if (r.unicode && !map.has(r.unicode)) map.set(r.unicode, r)
@@ -288,13 +361,15 @@ export async function listEntriesWithGlyph(db: Database, glyph: string, limit = 
   })
 }
 
-export async function countSigns(db: Database) {
+export async function countSigns(db: Database, script?: string) {
   const [row] = await db
     .select({
       total: count(),
       encoded: sql<number>`count(*) filter (where ${signs.unicode} is not null and ${signs.isForm} = false)`.mapWith(Number),
-      readings: sql<number>`(select count(*) from ${signReadings})`.mapWith(Number),
+      readings: sql<number>`(select count(*) from ${signReadings} r join ${signs} s2 on s2.id = r.sign_id where ${script ? sql`s2.script_id = ${script}` : sql`true`})`.mapWith(Number),
+      scripts: sql<number>`count(distinct ${signs.scriptId})`.mapWith(Number),
     })
     .from(signs)
-  return row ?? { total: 0, encoded: 0, readings: 0 }
+    .where(script ? eq(signs.scriptId, script) : undefined)
+  return row ?? { total: 0, encoded: 0, readings: 0, scripts: 0 }
 }

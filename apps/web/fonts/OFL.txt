@@ -2,14 +2,38 @@ Oracc Noto Sans Cuneiform (oracc-noto-sans-cuneiform.woff2)
   Copyright 2017 Google Inc. (Noto Sans Cuneiform), with additions by the
   Oracc Sign List project, https://github.com/oracc/oracc2 (msc/fonts).
 
-Oracc RSP, Oracc EMC and Oracc LAK (oracc-rsp-extra.woff2, oracc-emc-extra.woff2,
-oracc-lak-extra.woff2)
+Oracc RSP, Oracc EMC, Oracc Gudea and Oracc LAK (oracc-rsp-extra.woff2,
+oracc-emc-extra.woff2, oracc-gudea-extra.woff2, oracc-lak-extra.woff2)
   The Oracc Sign List project (Steve Tinney), https://github.com/oracc/oracc2
   (msc/fonts). Licensed under the SIL Open Font License 1.1 as stated on
   https://oracc.museum.upenn.edu/osl/OraccCuneiformFonts/.
 
-Modified Versions: converted to WOFF2; the RSP, EMC and LAK fonts are subset to
-the code points the Noto font does not cover. See build.py.
+Sumer Egyptian Hieroglyphs (egyptian-hieroglyphs-1.woff2 … egyptian-hieroglyphs-8.woff2),
+a modified version of UniHieroglyphica
+  Copyright (c) 2011-2025, Regents of the University of California, with
+  Reserved Font Name "Hieroglyphica". Font by Michel Suignard, published by the
+  Thesaurus Linguae Aegyptiae,
+  https://github.com/thesaurus-linguae-aegyptiae/unihieroglyphica.
+
+Noto Sans Anatolian Hieroglyphs, Coptic, Cypriot, Gothic, Imperial Aramaic,
+Linear A, Linear B, Ogham, Old Italic, Old Persian, Old South Arabian,
+Phoenician, Runic, Syriac and Ugaritic; Noto Serif Hebrew; Noto Serif
+(noto-sans-*.woff2, noto-serif-hebrew.woff2, noto-serif-greek.woff2)
+  Copyright 2022 The Noto Project Authors (https://github.com/notofonts),
+  via https://github.com/google/fonts.
+
+Modified Versions: converted to WOFF2; the RSP, EMC, Gudea and LAK fonts are
+subset to the code points the Noto font does not cover (build.py); the other
+fonts are subset to their script's Unicode blocks, variable fonts are pinned to
+normal width, and UniHieroglyphica is split into chunks by code point
+(build_scripts.py). Because "Hieroglyphica" is a Reserved Font Name, the
+modified UniHieroglyphica files are renamed "Sumer Egyptian Hieroglyphs" in
+their name tables.
+
+Not under this licence: oracc-pcsl.woff2 is built from PCSL.ttf, the
+proto-cuneiform font of the Oracc PCSL project (after Anshuman Pandey's CDLI
+fonts), distributed in https://github.com/oracc/pcsl under CC0 1.0. The font
+file itself carries no licence notice.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

@@ -37,7 +37,8 @@ export function betaToUnicode(input: string): string {
     if (LETTERS[lower]) {
       let letter = LETTERS[lower]!
       if (lower === "s") {
-        const next = chars.slice(i + 1).find((c) => !(c in MARKS) && c !== "*")
+        // LSJ splits stems with hyphens (ἐξουσ-ία): a sigma before one is still medial.
+        const next = chars.slice(i + 1).find((c) => !(c in MARKS) && c !== "*" && c !== "-")
         const isFinal = !next || !LETTERS[next.toLowerCase()]
         if (isFinal && !upper) letter = "ς"
       }

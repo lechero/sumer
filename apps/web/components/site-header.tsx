@@ -4,7 +4,7 @@ import { SearchForm } from "@/components/search-form"
 
 const NAV = [
   { href: "/", label: "Languages" },
-  { href: "/signs", label: "Signs" },
+  { href: "/scripts", label: "Scripts" },
   { href: "/search", label: "Search" },
   { href: "/next-steps", label: "Next steps" },
 ]

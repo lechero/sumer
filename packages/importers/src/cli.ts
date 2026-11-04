@@ -7,11 +7,30 @@ import { logger } from "./lib/log"
 import type { Importer } from "./registry"
 import { eblImporter } from "./sources/ebl"
 import { epsd2Importer } from "./sources/epsd2"
+import { copticImporter } from "./sources/coptic"
+import { lewisShortImporter } from "./sources/lewis-short"
 import { lsjImporter } from "./sources/lsj"
 import { oshbImporter } from "./sources/oshb"
+import { alphabetsImporter } from "./sources/alphabets"
 import { oslImporter } from "./sources/osl"
+import { pcslImporter } from "./sources/pcsl"
+import { unikemetImporter } from "./sources/unikemet"
+import { wiktionaryImporters } from "./sources/wiktionary"
 
-const importers: Importer[] = [oslImporter, epsd2Importer, eblImporter, oshbImporter, lsjImporter]
+// `--all` runs these in order, then the `runLast` ones (wiktionary, then coptic) in order.
+const importers: Importer[] = [
+  oslImporter,
+  pcslImporter,
+  unikemetImporter,
+  alphabetsImporter,
+  epsd2Importer,
+  eblImporter,
+  oshbImporter,
+  lsjImporter,
+  lewisShortImporter,
+  ...wiktionaryImporters,
+  copticImporter,
+]
 
 function usage(): never {
   console.log("usage: pnpm run import <source...> [--limit N] [--offline] [--prune] [--all]\n\nsources:")
@@ -23,9 +42,14 @@ async function main() {
   const args = process.argv.slice(2)
   const flags = new Set(args.filter((a) => a.startsWith("--") && !a.includes("=")))
   const limitArg = args.find((a) => a.startsWith("--limit"))
-  const limit = limitArg ? Number(limitArg.split("=")[1] ?? args[args.indexOf(limitArg) + 1]) : undefined
-  const names = args.filter((a) => !a.startsWith("--") && !(limitArg && a === args[args.indexOf(limitArg) + 1]))
-  const selected = flags.has("--all") ? importers : importers.filter((i) => names.includes(i.id))
+  // `--limit=N` or `--limit N`; in the second form N is not a source name.
+  const limitValueAt = limitArg && !limitArg.includes("=") ? args.indexOf(limitArg) + 1 : -1
+  const limit = limitArg ? Number(limitArg.split("=")[1] ?? args[limitValueAt]) : undefined
+  const names = args.filter((a, i) => !a.startsWith("--") && i !== limitValueAt)
+  const everything = importers.filter((i) => !i.explicitOnly)
+  const selected = flags.has("--all")
+    ? [...everything.filter((i) => !i.runLast), ...everything.filter((i) => i.runLast)]
+    : importers.filter((i) => names.includes(i.id))
   if (!selected.length) usage()
   const unknown = names.filter((n) => !importers.some((i) => i.id === n))
   if (unknown.length) {

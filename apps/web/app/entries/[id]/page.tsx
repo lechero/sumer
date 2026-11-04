@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { getEntryById, getSignsForText, type EntryDetail, type RelationType } from "@workspace/db"
+import { getEntryById, getGlyphBreakdown, getSignsForText, type EntryDetail, type RelationType } from "@workspace/db"
 import { Badge } from "@workspace/ui/components/badge"
 import { Separator } from "@workspace/ui/components/separator"
 
@@ -10,6 +10,7 @@ import { KindBadge, PosBadge } from "@/components/entry-badges"
 import { EntryLink } from "@/components/entry-link"
 import { GlyphBreakdown } from "@/components/glyph-breakdown"
 import { NativeText } from "@/components/native-text"
+import { SignBreakdown } from "@/components/sign-breakdown"
 import { UUID_RE, withDb } from "@/lib/data"
 import { RELATION_FROM_LABEL, RELATION_TO_LABEL } from "@/lib/labels"
 
@@ -22,8 +23,12 @@ async function load(id: string) {
   return withDb(async (db) => {
     const entry = await getEntryById(db, id)
     if (!entry) return undefined
-    const signsByGlyph = entry.nativeScript ? await getSignsForText(db, entry.nativeScript) : new Map()
-    return { entry, signsByGlyph }
+    // Cuneiform and hieroglyphs have sign lists: break the native script down into its signs.
+    const signScript = entry.language.script === "Egyp" ? "egyptian-hieroglyphs" : "cuneiform"
+    const signsByGlyph = entry.nativeScript ? await getSignsForText(db, entry.nativeScript, signScript) : new Map()
+    // Cuneiform spelled out sign by sign, with each reading's meaning (when the spelling resolves).
+    const breakdown = entry.language.script === "Xsux" ? await getGlyphBreakdown(db, entry) : undefined
+    return { entry, signsByGlyph, breakdown }
   })
 }
 
@@ -56,7 +61,7 @@ export default async function EntryPage({ params }: Props) {
   if (!r.ok) return <DbProblem result={r} />
   const entry: EntryDetail | undefined = r.data?.entry
   if (!entry || !r.data) notFound()
-  const signsByGlyph = r.data.signsByGlyph
+  const { signsByGlyph, breakdown } = r.data
 
   const lang = entry.language
   const isCuneiform = lang.script === "Xsux"
@@ -133,9 +138,17 @@ export default async function EntryPage({ params }: Props) {
             </Section>
           ) : null}
 
-          {isCuneiform && entry.nativeScript ? (
+          {breakdown ? (
+            <Section title="Sign by sign">
+              <SignBreakdown parts={breakdown} />
+            </Section>
+          ) : (isCuneiform || lang.script === "Egyp") && entry.nativeScript ? (
             <Section title="Signs">
-              <GlyphBreakdown text={entry.nativeScript} signsByGlyph={signsByGlyph} />
+              <GlyphBreakdown
+                text={entry.nativeScript}
+                signsByGlyph={signsByGlyph}
+                script={lang.script === "Egyp" ? "egyptian-hieroglyphs" : "cuneiform"}
+              />
             </Section>
           ) : null}
 

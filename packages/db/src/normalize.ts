@@ -19,6 +19,8 @@ const LETTER_MAP: Record<string, string> = {
   "ŋ": "g", "Ŋ": "g", "ĝ": "g", "Ĝ": "g",
   "ʾ": "", "ʿ": "", "ʔ": "", "ʕ": "", "ʼ": "", "’": "", "'": "",
   "ς": "σ",
+  // Egyptological aleph and ayin drop like ʾ ʿ (their popular spelling is "a", below); yod ꞽ is "i"
+  "ꜣ": "", "Ꜣ": "", "ꜥ": "", "Ꜥ": "", "ꞽ": "i", "Ꞽ": "i",
   // Hebrew final forms → regular forms
   "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ",
 }
@@ -29,6 +31,8 @@ const POPULAR_MAP: Record<string, string> = {
   "ṯ": "th", "ḏ": "dh", "ḵ": "kh", "ḫ": "kh", "ḥ": "h",
   "ḇ": "v", "p̄": "f", "ṣ": "ts", "ṭ": "t",
   "ŋ": "ng", "Ŋ": "ng", "ĝ": "ng", "Ĝ": "ng",
+  // Egyptian: rꜥ "Ra", mꜣꜥt "Maat"
+  "ꜣ": "a", "Ꜣ": "a", "ꜥ": "a", "Ꜥ": "a",
 }
 
 function escapeRegExp(s: string) {
@@ -49,7 +53,7 @@ export function normalizeForSearch(input: string, opts: { popular?: boolean } = 
   s = s.replace(/[₀-₉]/g, (d) => SUBSCRIPT_DIGITS[d] ?? d)
   s = applyMap(s, LETTER_MAP)
   // drop separators entirely so "e2-gal", "e2 gal" and "e2gal" collapse together
-  s = s.replace(/[\s\-‐‑‒–—־_.·,;:()[\]{}"«»]+/gu, "")
+  s = s.replace(/[\s\-‐‑‒–—־_.·,;:()[\]{}"«»⸗]+/gu, "")
   return s.toLowerCase().normalize("NFC")
 }
 

@@ -1,8 +1,8 @@
 import type { SignComponent } from "@workspace/db"
-import { isCuneiformCodePoint, isFullyEncoded, splitSignUnicode } from "@workspace/db/glyphs"
+import { isFullyEncoded, splitSignUnicode } from "@workspace/db/glyphs"
 import { cn } from "@workspace/ui/lib/utils"
 
-import { isDrawableCodePoint } from "@/lib/cuneiform-coverage"
+import { codePointDrawable, COMPOSITE_SCRIPTS, scriptFontClass } from "@/lib/scripts"
 
 const GAP_TITLE: Record<string, string> = {
   X: "component not encoded in Unicode",
@@ -11,14 +11,16 @@ const GAP_TITLE: Record<string, string> = {
   "?": "no font draws this sign yet",
 }
 
-/** True when the sign is fully encoded and the bundled fonts have a real glyph for every code point. */
-export function isDrawable(unicode: string | null | undefined): unicode is string {
-  if (!isFullyEncoded(unicode)) return false
-  for (const ch of unicode!) {
-    const cp = ch.codePointAt(0) ?? 0
-    if (isCuneiformCodePoint(cp) && !isDrawableCodePoint(cp)) return false
-  }
-  return true
+const allDrawable = (script: string, text: string) => [...text].every((ch) => codePointDrawable(script, ch.codePointAt(0) ?? 0))
+
+/**
+ * True when the sign has a glyph the bundled fonts really draw. Cuneiform and proto-cuneiform must also be
+ * fully encoded (OSL spells unencoded parts of a compound with placeholders such as X).
+ */
+export function isDrawable(unicode: string | null | undefined, script = "cuneiform"): unicode is string {
+  if (!unicode?.trim()) return false
+  if (COMPOSITE_SCRIPTS.has(script) && !isFullyEncoded(unicode)) return false
+  return allDrawable(script, unicode)
 }
 
 /** An empty dashed box where a component has no code point, or no font draws it. */
@@ -32,7 +34,11 @@ function Gap({ marker }: { marker: string }) {
 }
 
 /** A sign's stored Unicode, glyph by glyph; OSL placeholders and glyphs no font has become gaps (never the letters X or O). */
-export function SignGlyph({ unicode, className }: { unicode: string; className?: string }) {
+export function SignGlyph({ unicode, script = "cuneiform", className }: { unicode: string; script?: string; className?: string }) {
+  const font = scriptFontClass(script)
+  if (!COMPOSITE_SCRIPTS.has(script)) {
+    return allDrawable(script, unicode) ? <span className={cn(font, className)}>{unicode}</span> : <Gap marker="?" />
+  }
   const pieces: Array<{ text: string } | { gap: string }> = []
   for (const part of splitSignUnicode(unicode)) {
     if (part.kind === "gap") {
@@ -40,26 +46,25 @@ export function SignGlyph({ unicode, className }: { unicode: string; className?:
       continue
     }
     for (const ch of part.text) {
-      const cp = ch.codePointAt(0) ?? 0
       const last = pieces[pieces.length - 1]
-      if (isCuneiformCodePoint(cp) && !isDrawableCodePoint(cp)) pieces.push({ gap: "?" })
+      if (!codePointDrawable(script, ch.codePointAt(0) ?? 0)) pieces.push({ gap: "?" })
       else if (last && "text" in last) last.text += ch
       else pieces.push({ text: ch })
     }
   }
   return (
-    <span className={cn("font-cuneiform", className)}>
+    <span className={cn(font, className)}>
       {pieces.map((p, i) => ("gap" in p ? <Gap key={i} marker={p.gap} /> : <span key={i}>{p.text}</span>))}
     </span>
   )
 }
 
 /** The sign a component is drawn as: the first match the fonts can draw (AL@s, else AL). */
-export function drawnMatch(c: Extract<SignComponent, { kind: "sign" }>) {
-  return c.matches.find((m) => isDrawable(m.unicode)) ?? null
+export function drawnMatch(c: Extract<SignComponent, { kind: "sign" }>, script = "cuneiform") {
+  return c.matches.find((m) => isDrawable(m.unicode, script)) ?? null
 }
 
-function ComponentRun({ components }: { components: SignComponent[] }) {
+function ComponentRun({ components, script }: { components: SignComponent[]; script: string }) {
   return (
     <span className="inline-flex flex-wrap items-center justify-center text-[0.6em]">
       {components.map((c, i) => {
@@ -70,14 +75,14 @@ function ComponentRun({ components }: { components: SignComponent[] }) {
             </span>
           )
         }
-        const drawn = drawnMatch(c)
+        const drawn = drawnMatch(c, script)
         if (!drawn) return <Gap key={i} marker="X" />
         // AL for AL@s: the glyph of the base sign, with the missing modifier written next to it.
         const approximate = drawn.name !== c.name
         const suffix = approximate && c.name.startsWith(drawn.name) ? c.name.slice(drawn.name.length) : ""
         return (
           <span key={i} className="inline-flex items-start" title={approximate ? `${c.name}, drawn as ${drawn.name}` : c.name}>
-            <SignGlyph unicode={drawn.unicode!} />
+            <SignGlyph unicode={drawn.unicode!} script={script} />
             {suffix ? <span className="font-mono text-[0.35em]">{suffix}</span> : null}
           </span>
         )
@@ -94,16 +99,20 @@ function ComponentRun({ components }: { components: SignComponent[] }) {
 export function SignFace({
   unicode,
   components,
+  script = "cuneiform",
   className,
 }: {
   unicode: string | null
   components?: SignComponent[] | null
+  script?: string
   className?: string
 }) {
-  if (isDrawable(unicode)) return <SignGlyph unicode={unicode} className={className} />
-  const drawableParts = components?.some((c) => c.kind === "sign" && drawnMatch(c))
-  const partial = splitSignUnicode(unicode).some((p) => p.kind === "glyph" && [...p.text].some((ch) => isDrawableCodePoint(ch.codePointAt(0) ?? 0)))
-  const encoded = isFullyEncoded(unicode)
+  if (isDrawable(unicode, script)) return <SignGlyph unicode={unicode} script={script} className={className} />
+  const drawableParts = components?.some((c) => c.kind === "sign" && drawnMatch(c, script))
+  const partial =
+    COMPOSITE_SCRIPTS.has(script) &&
+    splitSignUnicode(unicode).some((p) => p.kind === "glyph" && [...p.text].some((ch) => codePointDrawable(script, ch.codePointAt(0) ?? 0)))
+  const encoded = COMPOSITE_SCRIPTS.has(script) ? isFullyEncoded(unicode) : !!unicode
   return (
     <span
       title={
@@ -114,14 +123,15 @@ export function SignFace({
             : "Not encoded in Unicode"
       }
       className={cn(
-        "inline-flex max-w-full items-center justify-center rounded-[0.12em] border border-dashed border-muted-foreground/50 px-[0.1em] py-[0.06em] font-cuneiform text-muted-foreground",
+        "inline-flex max-w-full items-center justify-center rounded-[0.12em] border border-dashed border-muted-foreground/50 px-[0.1em] py-[0.06em] text-muted-foreground",
+        scriptFontClass(script),
         className
       )}
     >
       {drawableParts ? (
-        <ComponentRun components={components!} />
+        <ComponentRun components={components!} script={script} />
       ) : partial ? (
-        <SignGlyph unicode={unicode!} className="text-[0.6em]" />
+        <SignGlyph unicode={unicode!} script={script} className="text-[0.6em]" />
       ) : (
         <span className="px-[0.2em] font-sans text-[0.25em] leading-tight">{encoded ? "no glyph yet" : "not encoded"}</span>
       )}

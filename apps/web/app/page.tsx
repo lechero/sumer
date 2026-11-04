@@ -81,16 +81,21 @@ export default async function HomePage() {
 
       {result.ok && result.data.signs.encoded > 0 ? (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight">Cuneiform signs</h2>
-          <Link href="/signs" className="group block">
+          <h2 className="text-xl font-semibold tracking-tight">Scripts and signs</h2>
+          <Link href="/scripts" className="group block">
             <Card className="transition-colors group-hover:bg-muted/50">
               <CardHeader>
-                <CardTitle className="flex flex-wrap items-baseline gap-x-3">
-                  <span className="font-cuneiform text-3xl font-normal leading-none" aria-hidden>𒀭𒂗𒆤 𒈗 𒆠 𒀀</span>
-                  <span>Sign list</span>
+                <CardTitle className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+                  <span className="font-cuneiform text-3xl font-normal leading-none" aria-hidden>𒀭𒂗𒆤</span>
+                  <span className="font-egyptian text-3xl font-normal leading-none" aria-hidden>𓂀𓅓𓆣</span>
+                  <span className="font-phoenician text-3xl font-normal leading-none" aria-hidden>𐤀𐤁𐤂</span>
+                  <span className="font-linear-b text-3xl font-normal leading-none" aria-hidden>𐀀𐀁𐀂</span>
+                  <span>Writing systems</span>
                 </CardTitle>
                 <CardDescription>
-                  {result.data.signs.encoded.toLocaleString()} encoded signs, {result.data.signs.readings.toLocaleString()} readings, from the Oracc Sign List — with every word written with each sign.
+                  {result.data.signs.total.toLocaleString()} signs in {result.data.signs.scripts} scripts with{" "}
+                  {result.data.signs.readings.toLocaleString()} readings: cuneiform and proto-cuneiform, Egyptian hieroglyphs, Linear A
+                  and B, and the alphabets from Ugaritic and Phoenician to Gothic and runes.
                 </CardDescription>
               </CardHeader>
             </Card>

@@ -1,14 +1,20 @@
 /**
  * Cuneiform glyph helpers shared by the importers and the web app.
  *
- * Code points: the Unicode cuneiform blocks (U+12000–1254F), the Archaic
- * Cuneiform Numerals range OSL already uses (U+12550–1268F), and the Oracc
- * Private Use Area in plane 15 (U+F0000–FFFFD), where OSL keeps signs pending
- * encoding. The web fonts in apps/web/fonts cover all of these.
+ * Code points: the Unicode cuneiform blocks (U+12000–1254F), the range of
+ * Oracc's proto-cuneiform encoding (PC24, U+12550–12BFF, which includes the
+ * Archaic Cuneiform Numerals OSL uses), and the Oracc Private Use Area in
+ * plane 15 (U+F0000–FFFFD), where OSL and PCSL keep signs pending encoding.
+ * The web fonts in apps/web/fonts cover all of these.
  */
 
 export function isCuneiformCodePoint(cp: number): boolean {
-  return (cp >= 0x12000 && cp <= 0x1268f) || (cp >= 0xf0000 && cp <= 0xffffd)
+  return (cp >= 0x12000 && cp <= 0x12bff) || (cp >= 0xf0000 && cp <= 0xffffd)
+}
+
+/** Egyptian hieroglyphs: the basic block (U+13000–1342F) and Extended-A (U+13460–143FF). */
+export function isHieroglyphCodePoint(cp: number): boolean {
+  return (cp >= 0x13000 && cp <= 0x1342f) || (cp >= 0x13460 && cp <= 0x143ff)
 }
 
 /** Variation selectors and the zero-width joiner attach to the glyph before them. */

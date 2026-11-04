@@ -9,6 +9,7 @@ import { greek } from "./data/greek"
 import { hebrew } from "./data/hebrew"
 import { relations as crossRelations } from "./data/relations"
 import { sumerian } from "./data/sumerian"
+import { upsertScripts } from "../scripts"
 import { upsertDataset, upsertRelations } from "./upsert"
 
 /** Sumerian words merge with ePSD2 by citation form; the grammatical parts are a layer of their own. */
@@ -32,6 +33,7 @@ async function main() {
   const handle = openDatabase()
   const db = handle.db as unknown as Database
   console.log(`[seed] driver=${handle.driver}  target=${handle.info.target}`)
+  await upsertScripts(db)
   const idByKey = new Map<string, string>()
   for (const ds of datasets) {
     const result = await upsertDataset(db, ds, { log: (m) => console.log(`[seed] ${m}`), keepExisting: true })

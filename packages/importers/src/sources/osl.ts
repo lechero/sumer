@@ -3,8 +3,19 @@
  * numbers and readings → `signs` + `sign_readings`.
  * Source: https://github.com/oracc/osl (00lib/osl.asl)
  */
-import { eq, inArray, sql } from "drizzle-orm"
-import { signReadings, signs, normalizeForSearch, upsertSource, type Database, type NewSign, type NewSignReading } from "@workspace/db"
+import { and, eq, inArray, sql } from "drizzle-orm"
+import {
+  normalizeForSearch,
+  signReadings,
+  signs,
+  upsertScripts,
+  upsertSource,
+  type Database,
+  type NewSign,
+  type NewSignReading,
+  type NewSource,
+  type ScriptId,
+} from "@workspace/db"
 
 import { download, readCached } from "../lib/cache"
 import type { Importer } from "../registry"
@@ -27,6 +38,8 @@ export type ParsedSign = {
   codepoints: string[]
   unicodeName?: string
   unicodeVersion?: string
+  /** Oracc Private Use Area code point (@upua) for signs Unicode lacks. */
+  pua?: string
   isForm: boolean
   parent?: string
   aliases: string[]
@@ -109,6 +122,9 @@ export function parseAsl(text: string): ParsedSign[] {
       case "@uage":
         s.unicodeVersion = rest
         break
+      case "@upua":
+        s.pua = rest
+        break
       case "@aka":
         s.aliases.push(rest)
         break
@@ -145,114 +161,141 @@ export function parseAsl(text: string): ParsedSign[] {
   return out
 }
 
+const cp = (u: string) => String.fromCodePoint(parseInt(u.replace(/^U\+/, ""), 16))
+
+/** The glyph to store: OSL's @ucun spelling, else the first Unicode code point, else the Oracc PUA one. */
+export function signGlyph(s: ParsedSign): string | null {
+  if (s.unicode) return s.unicode
+  if (s.codepoints[0]) return cp(s.codepoints[0])
+  return s.pua ? cp(s.pua) : null
+}
+
+export type AslImport = {
+  db: Database
+  log: (m: string) => void
+  scriptId: ScriptId
+  source: NewSource
+  parsed: ParsedSign[]
+  limit?: number
+}
+
+/** Write the signs, forms and readings of a parsed ASL sign list into one script. */
+export async function importAslSigns({ db, log, scriptId, source, parsed, limit }: AslImport) {
+  const list = limit ? parsed.slice(0, limit) : parsed
+  log(`parsed ${parsed.length} signs/forms (${parsed.filter((s) => !s.isForm).length} base signs)`)
+
+  await upsertScripts(db, [scriptId])
+  await upsertSource(db, source)
+  const idByName = new Map<string, string>()
+
+  const toRow = (s: ParsedSign): NewSign => ({
+    scriptId,
+    name: s.name,
+    oid: s.oid ?? null,
+    unicode: signGlyph(s),
+    codepoints: s.codepoints.length ? s.codepoints : null,
+    unicodeName: s.unicodeName ?? null,
+    unicodeVersion: s.unicodeVersion ?? null,
+    isForm: s.isForm,
+    aliases: s.aliases.length ? s.aliases : null,
+    listNumbers: Object.keys(s.lists).length ? s.lists : null,
+    links: s.links.length ? s.links : null,
+    notes: s.notes.length ? s.notes.join("\n") : null,
+    sourceId: source.id,
+    sourceRef: s.oid ?? null,
+  })
+
+  // Pass 1: base signs, pass 2: forms (need parent ids). A form can share its name with a sign of its own
+  // (`@form U` under BUR₃@v, `@sign U`); the sign wins, so dedupe with base signs first, then keep the first form.
+  const seen = new Set<string>()
+  const ordered = [...list.filter((s) => !s.isForm), ...list.filter((s) => s.isForm)]
+  const unique = ordered.filter((s) => (seen.has(s.name) ? false : (seen.add(s.name), true)))
+  const bases = unique.filter((s) => !s.isForm)
+  const forms = unique.filter((s) => s.isForm)
+
+  const writeSigns = async (rows: ParsedSign[], parentOf?: (s: ParsedSign) => string | null) => {
+    for (let i = 0; i < rows.length; i += 200) {
+      const batch = rows.slice(i, i + 200)
+      const inserted = await db
+        .insert(signs)
+        .values(batch.map((s) => ({ ...toRow(s), parentId: parentOf ? parentOf(s) : null })))
+        .onConflictDoUpdate({
+          target: [signs.scriptId, signs.name],
+          set: {
+            oid: sql`excluded.oid`,
+            unicode: sql`excluded.unicode`,
+            codepoints: sql`excluded.codepoints`,
+            unicodeName: sql`excluded.unicode_name`,
+            unicodeVersion: sql`excluded.unicode_version`,
+            isForm: sql`excluded.is_form`,
+            parentId: sql`excluded.parent_id`,
+            aliases: sql`excluded.aliases`,
+            listNumbers: sql`excluded.list_numbers`,
+            links: sql`excluded.links`,
+            notes: sql`excluded.notes`,
+            sourceId: sql`excluded.source_id`,
+            sourceRef: sql`excluded.source_ref`,
+            updatedAt: sql`now()`,
+          },
+        })
+        .returning({ id: signs.id, name: signs.name })
+      for (const r of inserted) idByName.set(r.name, r.id)
+    }
+  }
+  await writeSigns(bases)
+  await writeSigns(forms, (s) => (s.parent ? (idByName.get(s.parent) ?? null) : null))
+  log(`signs: ${bases.length} base + ${forms.length} forms`)
+
+  // Readings: rewrite for every sign we touched.
+  const ids = [...idByName.values()]
+  for (let i = 0; i < ids.length; i += 500) {
+    await db.delete(signReadings).where(inArray(signReadings.signId, ids.slice(i, i + 500)))
+  }
+  const readingRows: NewSignReading[] = []
+  for (const s of unique) {
+    const signId = idByName.get(s.name)
+    if (!signId) continue
+    const seenValues = new Set<string>()
+    s.readings.forEach((r, i) => {
+      const key = `${r.value}|${r.language ?? ""}`
+      if (seenValues.has(key)) return
+      seenValues.add(key)
+      readingRows.push({
+        signId,
+        value: r.value,
+        language: r.language,
+        searchKey: normalizeForSearch(r.value),
+        isUncertain: r.uncertain,
+        isDeprecated: r.deprecated,
+        sortOrder: i,
+      })
+    })
+  }
+  // (signId, value) must be unique: a value can appear for two languages → keep the first.
+  const dedup = new Map<string, NewSignReading>()
+  for (const r of readingRows) {
+    const k = `${r.signId}|${r.value}`
+    if (!dedup.has(k)) dedup.set(k, r)
+  }
+  const finalRows = [...dedup.values()]
+  for (let i = 0; i < finalRows.length; i += 500) {
+    await db.insert(signReadings).values(finalRows.slice(i, i + 500))
+  }
+  log(`readings: ${finalRows.length}`)
+
+  const [count] = await db
+    .select({ n: sql<number>`count(*)`.mapWith(Number) })
+    .from(signs)
+    .where(and(eq(signs.sourceId, source.id), eq(signs.scriptId, scriptId)))
+  log(`done — ${count?.n ?? 0} ${scriptId} signs in the database`)
+}
+
 export const oslImporter: Importer = {
   id: "osl",
   language: "sux",
   description: "Oracc Sign List → cuneiform signs with Unicode, sign-list numbers and readings",
   async run({ db, log, limit, offline }) {
     const file = await download("osl", "osl.asl", OSL_URL, { offline, log })
-    const parsed = parseAsl(await readCached(file))
-    const list = limit ? parsed.slice(0, limit) : parsed
-    log(`parsed ${parsed.length} signs/forms (${parsed.filter((s) => !s.isForm).length} base signs)`)
-
-    await upsertSource(db, oslSource)
-    const idByName = new Map<string, string>()
-
-    const toRow = (s: ParsedSign): NewSign => ({
-      name: s.name,
-      oid: s.oid ?? null,
-      unicode: s.unicode ?? (s.codepoints[0] ? String.fromCodePoint(parseInt(s.codepoints[0].slice(2), 16)) : null),
-      codepoints: s.codepoints.length ? s.codepoints : null,
-      unicodeName: s.unicodeName ?? null,
-      unicodeVersion: s.unicodeVersion ?? null,
-      isForm: s.isForm,
-      aliases: s.aliases.length ? s.aliases : null,
-      listNumbers: Object.keys(s.lists).length ? s.lists : null,
-      links: s.links.length ? s.links : null,
-      notes: s.notes.length ? s.notes.join("\n") : null,
-      sourceId: oslSource.id,
-      sourceRef: s.oid ?? null,
-    })
-
-    // Pass 1: base signs, pass 2: forms (need parent ids). A form can share its name with a sign of its own
-    // (`@form U` under BUR₃@v, `@sign U`); the sign wins, so dedupe with base signs first, then keep the first form.
-    const seen = new Set<string>()
-    const ordered = [...list.filter((s) => !s.isForm), ...list.filter((s) => s.isForm)]
-    const unique = ordered.filter((s) => (seen.has(s.name) ? false : (seen.add(s.name), true)))
-    const bases = unique.filter((s) => !s.isForm)
-    const forms = unique.filter((s) => s.isForm)
-
-    const writeSigns = async (rows: ParsedSign[], parentOf?: (s: ParsedSign) => string | null) => {
-      for (let i = 0; i < rows.length; i += 200) {
-        const batch = rows.slice(i, i + 200)
-        const inserted = await db
-          .insert(signs)
-          .values(batch.map((s) => ({ ...toRow(s), parentId: parentOf ? parentOf(s) : null })))
-          .onConflictDoUpdate({
-            target: signs.name,
-            set: {
-              oid: sql`excluded.oid`,
-              unicode: sql`excluded.unicode`,
-              codepoints: sql`excluded.codepoints`,
-              unicodeName: sql`excluded.unicode_name`,
-              unicodeVersion: sql`excluded.unicode_version`,
-              isForm: sql`excluded.is_form`,
-              parentId: sql`excluded.parent_id`,
-              aliases: sql`excluded.aliases`,
-              listNumbers: sql`excluded.list_numbers`,
-              links: sql`excluded.links`,
-              notes: sql`excluded.notes`,
-              sourceId: sql`excluded.source_id`,
-              sourceRef: sql`excluded.source_ref`,
-              updatedAt: sql`now()`,
-            },
-          })
-          .returning({ id: signs.id, name: signs.name })
-        for (const r of inserted) idByName.set(r.name, r.id)
-      }
-    }
-    await writeSigns(bases)
-    await writeSigns(forms, (s) => (s.parent ? (idByName.get(s.parent) ?? null) : null))
-    log(`signs: ${bases.length} base + ${forms.length} forms`)
-
-    // Readings: rewrite for every sign we touched.
-    const ids = [...idByName.values()]
-    for (let i = 0; i < ids.length; i += 500) {
-      await db.delete(signReadings).where(inArray(signReadings.signId, ids.slice(i, i + 500)))
-    }
-    const readingRows: NewSignReading[] = []
-    for (const s of unique) {
-      const signId = idByName.get(s.name)
-      if (!signId) continue
-      const seenValues = new Set<string>()
-      s.readings.forEach((r, i) => {
-        const key = `${r.value}|${r.language ?? ""}`
-        if (seenValues.has(key)) return
-        seenValues.add(key)
-        readingRows.push({
-          signId,
-          value: r.language ? `${r.value}` : r.value,
-          language: r.language,
-          searchKey: normalizeForSearch(r.value),
-          isUncertain: r.uncertain,
-          isDeprecated: r.deprecated,
-          sortOrder: i,
-        })
-      })
-    }
-    // (signId, value) must be unique: a value can appear for two languages → keep the first.
-    const dedup = new Map<string, NewSignReading>()
-    for (const r of readingRows) {
-      const k = `${r.signId}|${r.value}`
-      if (!dedup.has(k)) dedup.set(k, r)
-    }
-    const finalRows = [...dedup.values()]
-    for (let i = 0; i < finalRows.length; i += 500) {
-      await db.insert(signReadings).values(finalRows.slice(i, i + 500))
-    }
-    log(`readings: ${finalRows.length}`)
-
-    const [count] = await db.select({ n: sql<number>`count(*)`.mapWith(Number) }).from(signs).where(eq(signs.sourceId, oslSource.id))
-    log(`done — ${count?.n ?? 0} signs in the database`)
+    await importAslSigns({ db, log, scriptId: "cuneiform", source: oslSource, parsed: parseAsl(await readCached(file)), limit })
   },
 }

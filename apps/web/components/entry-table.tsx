@@ -11,15 +11,19 @@ import type { EntryListItem } from "@workspace/db"
 
 import { KindBadge, PosBadge } from "@/components/entry-badges"
 import { NativeText } from "@/components/native-text"
+import { SignBreakdownInline } from "@/components/sign-breakdown"
+import type { Breakdowns } from "@/lib/breakdowns"
 
 type Props = {
   rows: EntryListItem[]
   /** Hide the language column when every row is from the same language. */
   showLanguage?: boolean
   emptyMessage?: string
+  /** Sign-by-sign readings for cuneiform rows (shown under each glyph). */
+  breakdowns?: Breakdowns
 }
 
-export function EntryTable({ rows, showLanguage = true, emptyMessage = "No entries." }: Props) {
+export function EntryTable({ rows, showLanguage = true, emptyMessage = "No entries.", breakdowns }: Props) {
   if (rows.length === 0) {
     return <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">{emptyMessage}</p>
   }
@@ -50,7 +54,9 @@ export function EntryTable({ rows, showLanguage = true, emptyMessage = "No entri
                 {e.transliteration ? <div className="text-xs text-muted-foreground">{e.transliteration}</div> : null}
               </TableCell>
               <TableCell className="align-top">
-                {e.nativeScript && e.nativeScript !== e.headword ? (
+                {breakdowns?.get(e.id) ? (
+                  <SignBreakdownInline parts={breakdowns.get(e.id)!} />
+                ) : e.nativeScript && e.nativeScript !== e.headword ? (
                   <NativeText
                     text={e.nativeScript}
                     script={e.language.script}

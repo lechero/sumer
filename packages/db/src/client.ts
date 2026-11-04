@@ -26,35 +26,32 @@ export type DatabaseHandle =
       close: () => Promise<void>
     }
 
-// Cached on globalThis so Next.js hot reloads reuse one connection pool / one PGlite instance.
-const globalRef = globalThis as unknown as { __sumerDbHandle?: DatabaseHandle }
+// Cached on globalThis so Next.js hot reloads reuse one connection pool / one PGlite instance. The Drizzle
+// wrapper is rebuilt when the schema module changes (a hot reload after a migration), so new tables show up.
+const globalRef = globalThis as unknown as {
+  __sumerDbHandle?: DatabaseHandle
+  __sumerDbClient?: { info: DatabaseInfo; sql?: ReturnType<typeof postgres>; pglite?: PGlite }
+  __sumerDbSchema?: Schema
+}
 
 /** Open (or reuse) the database chosen by the environment. */
 export function openDatabase(): DatabaseHandle {
-  if (globalRef.__sumerDbHandle) return globalRef.__sumerDbHandle
+  if (globalRef.__sumerDbHandle && globalRef.__sumerDbSchema === schema) return globalRef.__sumerDbHandle
 
-  const info = getDatabaseInfo()
-  let handle: DatabaseHandle
+  const client = (globalRef.__sumerDbClient ??= (() => {
+    const info = getDatabaseInfo()
+    return info.driver === "postgres"
+      ? { info, sql: postgres(info.target, { max: 10, onnotice: () => {} }) }
+      : { info, pglite: new PGlite(info.target) }
+  })())
+  const { info, sql, pglite } = client
 
-  if (info.driver === "postgres") {
-    const sql = postgres(info.target, { max: 10, onnotice: () => {} })
-    handle = {
-      driver: "postgres",
-      info,
-      db: drizzlePostgres(sql, { schema }),
-      close: () => sql.end({ timeout: 5 }),
-    }
-  } else {
-    const client = new PGlite(info.target)
-    handle = {
-      driver: "pglite",
-      info,
-      db: drizzlePglite(client, { schema }),
-      close: () => client.close(),
-    }
-  }
+  const handle: DatabaseHandle = sql
+    ? { driver: "postgres", info, db: drizzlePostgres(sql, { schema }), close: () => sql.end({ timeout: 5 }) }
+    : { driver: "pglite", info, db: drizzlePglite(pglite!, { schema }), close: () => pglite!.close() }
 
   globalRef.__sumerDbHandle = handle
+  globalRef.__sumerDbSchema = schema
   return handle
 }
 
@@ -67,5 +64,7 @@ export async function closeDatabase(): Promise<void> {
   const handle = globalRef.__sumerDbHandle
   if (!handle) return
   globalRef.__sumerDbHandle = undefined
+  globalRef.__sumerDbClient = undefined
+  globalRef.__sumerDbSchema = undefined
   await handle.close()
 }

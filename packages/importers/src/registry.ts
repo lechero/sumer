@@ -16,5 +16,9 @@ export type Importer = {
   /** ISO 639-3 of the language it populates (or "*" for several). */
   language: string
   description: string
+  /** Only run when named explicitly; `--all` skips it (e.g. the per-language parts of a group importer). */
+  explicitOnly?: boolean
+  /** In `--all`, run after every other importer (e.g. cross-language link builders). */
+  runLast?: boolean
   run: (ctx: ImporterContext) => Promise<void>
 }

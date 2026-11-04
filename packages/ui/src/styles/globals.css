@@ -129,10 +129,30 @@
     @apply bg-background text-foreground;
     }
 }
-/* Script-specific font stacks: font-cuneiform, font-hebrew, font-greek utilities. */
+/*
+ * Script-specific font stacks → font-cuneiform, font-egyptian, font-hebrew … utilities.
+ * The --font-*-web properties are set on <html> by apps/web from its self-hosted fonts
+ * (lib/cuneiform-fonts.ts, lib/script-fonts.ts); each stack falls back to locally installed fonts.
+ */
 @theme {
-    /* --font-cuneiform-web: Oracc Noto + gap fillers, set by apps/web (lib/cuneiform-fonts.ts). */
     --font-cuneiform: var(--font-cuneiform-web, "Noto Sans Cuneiform"), "Noto Sans Cuneiform", "Segoe UI Historic", sans-serif;
-    --font-hebrew: "Noto Serif Hebrew", "SBL Hebrew", "Ezra SIL", "Times New Roman", serif;
-    --font-greek: "Noto Serif", "Gentium Plus", "Palatino Linotype", "Times New Roman", serif;
+    --font-proto-cuneiform: var(--font-proto-cuneiform-web, "PCSL"), var(--font-cuneiform-web, "Noto Sans Cuneiform"), sans-serif;
+    --font-egyptian: var(--font-egyptian-web, "UniHieroglyphica"), "Noto Sans Egyptian Hieroglyphs", "Segoe UI Historic", sans-serif;
+    --font-ugaritic: var(--font-ugaritic-web, "Noto Sans Ugaritic"), "Segoe UI Historic", sans-serif;
+    --font-phoenician: var(--font-phoenician-web, "Noto Sans Phoenician"), "Segoe UI Historic", sans-serif;
+    --font-aramaic: var(--font-aramaic-web, "Noto Sans Imperial Aramaic"), "Segoe UI Historic", sans-serif;
+    --font-syriac: var(--font-syriac-web, "Noto Sans Syriac"), "Estrangelo Edessa", "Segoe UI Historic", sans-serif;
+    --font-south-arabian: var(--font-south-arabian-web, "Noto Sans Old South Arabian"), "Segoe UI Historic", sans-serif;
+    --font-old-persian: var(--font-old-persian-web, "Noto Sans Old Persian"), "Segoe UI Historic", sans-serif;
+    --font-anatolian: var(--font-anatolian-web, "Noto Sans Anatolian Hieroglyphs"), sans-serif;
+    --font-linear-a: var(--font-linear-a-web, "Noto Sans Linear A"), sans-serif;
+    --font-linear-b: var(--font-linear-b-web, "Noto Sans Linear B"), "Segoe UI Historic", sans-serif;
+    --font-cypriot: var(--font-cypriot-web, "Noto Sans Cypriot"), "Segoe UI Historic", sans-serif;
+    --font-old-italic: var(--font-old-italic-web, "Noto Sans Old Italic"), "Segoe UI Historic", sans-serif;
+    --font-coptic: var(--font-coptic-web, "Noto Sans Coptic"), "Antinoou", "Segoe UI Historic", sans-serif;
+    --font-gothic: var(--font-gothic-web, "Noto Sans Gothic"), "Segoe UI Historic", sans-serif;
+    --font-runic: var(--font-runic-web, "Noto Sans Runic"), "Segoe UI Historic", sans-serif;
+    --font-ogham: var(--font-ogham-web, "Noto Sans Ogham"), "Segoe UI Historic", sans-serif;
+    --font-hebrew: var(--font-hebrew-web, "Noto Serif Hebrew"), "SBL Hebrew", "Ezra SIL", "Times New Roman", serif;
+    --font-greek: var(--font-greek-web, "Noto Serif"), "Gentium Plus", "Palatino Linotype", "Times New Roman", serif;
 }

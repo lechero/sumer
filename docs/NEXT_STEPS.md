@@ -9,10 +9,28 @@ This page is the working roadmap for the ancient-languages dictionary. It is ren
 - pnpm + Turborepo monorepo in the shadcn/ui layout: `apps/web` (Next.js 16, React 19, Tailwind v4), `packages/ui` (shadcn components), `packages/db` (Drizzle ORM), shared ESLint / TypeScript configs.
 - Postgres 17 via `docker-compose.yml`, configured by `.env` (copy `.env.example`). Without `DATABASE_URL` the app and scripts fall back to an embedded **PGlite** database in `./.pglite`, so everything runs with zero setup.
 - Schema: `languages`, `sources`, `entries` (kind = **word** or **part**), `senses`, `entry_components` (what an entry is built from), `entry_relations` (loans, cognates, translation equivalents across languages).
-- Seed data: Sumerian, Akkadian, Ancient Greek, Biblical Hebrew — a few hundred hand-curated words and word parts, with composition (lugal = lu + gal) and cross-language chains (egal → ekallu → הֵיכָל).
-- **Importers** (`task import:all` or `pnpm run import --all`): Oracc Sign List (4,264 signs, 11,208 readings), ePSD2 (15,940 Sumerian lemmas, 15,143 rendered in cuneiform, 909 compounds linked to their members, Akkadian equivalents), eBL (22,263 Akkadian words with derivations and logograms), Open Scriptures (8,834 Hebrew + 745 Aramaic words, 2,000 roots), LSJ (~114k Greek entries). ~164k entries in total.
-- **Cuneiform**: a `signs` / `sign_readings` model, a transliteration → Unicode renderer (`{d}en-lil₂` → 𒀭𒂗𒆤), a sign browser (`/signs`, searchable by reading, name or glyph) and sign pages listing every word written with the sign.
-- **Glyphs**: self-hosted Oracc fonts (Oracc Noto plus RSP / EMC / Gudea / LAK gap fillers, `task fonts`) draw 3,243 of the 4,264 signs, including the OSL Private Use Area and Archaic Cuneiform Numerals. Unencoded signs are shown through their components (`|BAR×TAB|` → 𒁇×𒋰) and link to them.
+- Seed data: Sumerian, Akkadian, Ancient Greek and Biblical Hebrew. A few hundred hand-curated words and word parts, with composition (lugal = lu + gal) and cross-language chains (egal → ekallu → הֵיכָל).
+- **Dictionary importers** (`task import:all` or `pnpm run import --all`), ~291k entries in 26 languages in total:
+  - ePSD2: 15,940 Sumerian lemmas, 15,152 rendered in cuneiform, 909 compounds linked to their members, Akkadian equivalents.
+  - eBL: 22,263 Akkadian words with derivations and logograms.
+  - Open Scriptures: 8,834 Hebrew + 745 Aramaic words, 2,000 roots.
+  - LSJ: ~112k Greek entries.
+  - Lewis & Short: 51,602 Latin entries.
+  - Comprehensive Coptic Lexicon: 11,262 Coptic entries with Egyptian etymologies; Greek loanwords linked to LSJ.
+  - Wiktionary (Kaikki): 66,815 lemmas in 19 languages and 17,019 etymology links. The languages are Egyptian (in hieroglyphs), Hittite, Ugaritic, Syriac, Sabaean, Ge'ez, Mycenaean Greek, Etruscan, Old Persian, Sanskrit, Pali, Tocharian B, Gothic, Old Norse, Old English, Old Irish, Old Church Slavonic, Classical Armenian and Proto-Indo-European.
+- **Writing systems**: a `scripts` table with 20 scripts, each with its own sign inventory (`signs.script_id`), ~13k signs in all:
+  - Oracc Sign List: 4,264 cuneiform signs, 11,208 readings.
+  - Oracc PCSL: 2,240 proto-cuneiform signs.
+  - Unicode Unikemet: 5,067 Egyptian hieroglyphs in Gardiner's categories, with phonetic values.
+  - Unicode Character Database: 17 alphabets and syllabaries, from Ugaritic and Linear B to runes and ogham, with transliterations.
+  - Browsed at `/scripts`. Each sign page has prev/next navigation. Cuneiform and hieroglyph sign pages also list every word written with the sign.
+- **Cuneiform**: a transliteration → Unicode renderer (`{d}en-lil₂` → 𒀭𒂗𒆤), and a sign-by-sign breakdown on entry pages and in result tables (each glyph's reading, sign and, for Sumerian, its meaning as a word). Unencoded signs are shown through their components (`|BAR×TAB|` → 𒁇×𒋰) and link to them.
+- **Glyphs**: every script is drawn with self-hosted fonts (`task fonts`):
+  - Oracc's cuneiform fonts draw 3,243 of the 4,264 signs, including the OSL Private Use Area and Archaic Cuneiform Numerals.
+  - PCSL for proto-cuneiform.
+  - UniHieroglyphica, renamed for the OFL, for all Unicode hieroglyphs.
+  - Noto for the rest.
+  - Nothing is loaded from Google Fonts.
 - Web app: language overview, per-language browsing (words / parts), global search that ignores diacritics, vowel points and sign indices, entry pages with components, usages, relations and a glyph-by-glyph breakdown, a JSON API at `/api/entries`.
 
 **Not done / caveats**
@@ -23,6 +41,8 @@ This page is the working roadmap for the ancient-languages dictionary. It is ren
 - Cuneiform is shown in its standard Unicode form, which is the Neo-Assyrian sign shape; period-specific glyphs (Ur III, Old Babylonian) need a dedicated font or images.
 - 16 OSL Private Use Area code points (mostly curved numerals such as `10(U@c)`) have no glyph in any Oracc font yet; those signs fall back to their components.
 - PGlite allows a single process per data directory: stop the dev server before seeding when you are not on Postgres.
+- Wiktionary data is broader but less precise than the scholarly lexica. Its etymology links are only made when the target word resolves unambiguously, so many mentions stay unlinked. Kaikki marks its per-language dumps deprecated; the importer may have to move to the full raw dump.
+- Alphabet transliterations are hand-written maps in `packages/importers/src/sources/alphabets.ts` (one convention per script). Anatolian hieroglyphs and proto-cuneiform signs have no readings yet.
 - No tests, no CI, no auth, no editing UI yet.
 
 ## 1. Run it
@@ -39,12 +59,18 @@ Useful: `pnpm db:studio` (Drizzle Studio), `pnpm db:generate` after editing `pac
 
 ## 2. Collect the data — sources and importers
 
-Importers live in `packages/importers/src/sources/`; each downloads into `.cache/importers/<source>/`, converts to `SeedDataset` and calls `upsertDataset` (stable per-source refs, re-runnable). **Done:** osl, epsd2, ebl, oshb, lsj. **Next:** the rows below marked *todo*.
+Importers live in `packages/importers/src/sources/`. Each one downloads into `.cache/importers/<source>/`, converts to `SeedDataset` and calls `upsertDataset` (stable per-source refs, re-runnable). Sign lists go through `writeSignInventory` (`src/lib/signs.ts`).
+
+- **Done:** osl, pcsl, unikemet, alphabets, epsd2, ebl, oshb, lsj, lewis-short, coptic, wiktionary.
+- **Next:** the rows below marked *todo*.
 
 | Language | Source | Format | Licence | Notes |
 | --- | --- | --- | --- | --- |
 | Sumerian | [ePSD2](http://oracc.museum.upenn.edu/epsd2/) (Oracc) | `epsd2.zip` → `gloss-sux.json` (1.9 GB) | CC BY-SA 3.0 | **done** — forms/periods/instances not yet stored (a `forms` table would hold the 100k+ spellings). |
-| Sumerian / Akkadian | [Oracc Sign List (OSL)](https://github.com/oracc/osl) | `00lib/osl.asl` | CC0 | **done** — `@sys` compositions, `@upua` private-use glyphs and sign images are *todo*. |
+| Sumerian / Akkadian | [Oracc Sign List (OSL)](https://github.com/oracc/osl) | `00lib/osl.asl` | CC0 | **done** (incl. `@upua` private-use glyphs). `@sys` compositions and sign images are *todo*. |
+| Proto-cuneiform | [Oracc PCSL](https://github.com/oracc/pcsl) | `00lib/pcsl.asl` | CC0 | **done**. *todo*: numeric values, and the PCSL corpus for attestations. |
+| Egyptian | [Unikemet](https://www.unicode.org/reports/tr57/) (Unicode) | `Unikemet.txt` | Unicode License v3 | **done**: 5,067 hieroglyphs with Gardiner numbers and phonetic values. |
+| Egyptian | [TLA](https://thesaurus-linguae-aegyptiae.de/) lemma list | JSON / API | check | *todo*: the scholarly Egyptian lexicon, to replace or extend the Wiktionary Egyptian entries. Coptic entries already carry TLA lemma ids. |
 | Sumerian | [ETCSL](https://etcsl.orinst.ox.ac.uk/) | TEI XML | academic use | Literary corpus for attestations / example lines. |
 | Sumerian | [CDLI](https://cdli.mpiwg-berlin.mpg.de/) | ATF, API | CC BY | Transliterated tablets; attestation counts and images. |
 | Akkadian | Oracc project glossaries (e.g. [RINAP](http://oracc.org/rinap), [SAAo](http://oracc.org/saao)) | JSON | CC BY-SA | Same JSON shape as ePSD2 → one importer covers both. |
@@ -54,9 +80,20 @@ Importers live in `packages/importers/src/sources/`; each downloads into `.cache
 | Greek | Perseus Morpheus / [Morpheus data](https://github.com/PerseusDL/morpheus) | XML | CC BY-SA | Inflected forms and stems → `entry_components`. |
 | Hebrew | [Open Scriptures Hebrew Lexicon](https://github.com/openscriptures/HebrewLexicon) (BDB + Strong's) | XML | CC BY 4.0 | **done** — Strong's numbers are in the notes; make them searchable (*todo*). |
 | Hebrew | [OSHB morphology](https://github.com/openscriptures/morphhb) | XML | CC BY 4.0 | Every word in the Hebrew Bible parsed → attestations and affixes. |
-| Any | [Wiktionary dumps](https://dumps.wikimedia.org/) / [kaikki.org](https://kaikki.org/) | JSON | CC BY-SA | Broad coverage, etymologies and cross-links; lower precision. |
+| Latin | [Lewis & Short](https://github.com/PerseusDL/lexica) (Perseus) | TEI XML | CC BY-SA 4.0 | **done**. *todo*: inflected forms (Whitaker's Words, Morpheus). |
+| Coptic | [Comprehensive Coptic Lexicon](https://github.com/KELLIA/dictionary) (KELLIA) | TEI XML | CC BY-SA 4.0 | **done**, with Egyptian/Demotic etymologies and Greek loanwords linked to LSJ. |
+| 19 languages | [kaikki.org](https://kaikki.org/) (Wiktionary) | per-language JSONL | CC BY-SA 4.0 + GFDL | **done**: lemmas plus `{{inh}}` / `{{der}}` / `{{bor}}` / `{{cog}}` etymology links. Not on Kaikki: Phoenician, Avestan, Luwian, Hurrian and Elamite. |
+| Sanskrit | [Cologne Digital Sanskrit Dictionaries](https://www.sanskrit-lexicon.uni-koeln.de/) (Monier-Williams) | XML | check | The largest Sanskrit–English dictionary; would replace the Wiktionary Sanskrit subset. |
+| Pali | [PTS Pali-English Dictionary](https://dsal.uchicago.edu/dictionaries/pali/) | HTML/XML | check | Larger and scholarly. |
 
-Languages to add next (each is a `languages` row plus an importer): Egyptian ([TLA](https://thesaurus-linguae-aegyptiae.de/)), Latin (Lewis & Short via Perseus, Whitaker's Words), Aramaic ([CAL](https://cal.huc.edu/)), Ugaritic, Hittite ([eDiAna](https://www.ediana.gwi.uni-muenchen.de/)), Old Persian, Coptic, Sanskrit, Gothic, Old Norse, Old English.
+Languages to add next (each one is a `languages` row plus an importer):
+
+- Aramaic beyond the Bible ([CAL](https://cal.huc.edu/); check its licence).
+- Hittite and Luwian ([eDiAna](https://www.ediana.gwi.uni-muenchen.de/)).
+- Avestan.
+- Old Turkic.
+- Classical Chinese, with the oracle-bone and bronze scripts as further `scripts` rows.
+- Mayan hieroglyphs: a sign list once Unicode encodes them; the proposal is in progress.
 
 Importer checklist:
 
@@ -89,13 +126,13 @@ Importer checklist:
 - **Browse by root / sign**: Semitic roots → derived words; cuneiform signs → readings → words.
 - **Editing UI** with server actions and validation (zod is already in the workspace), behind auth; drafts and review.
 - **Export**: JSON, CSV and TEI Lex-0 per language; the `/api/entries` route is the seed of a public API — add pagination links, filtering by part kind, and `/api/languages`.
-- **Fonts**: cuneiform is self-hosted; bundle Noto Serif Hebrew and Noto Serif locally too instead of loading them from Google Fonts.
+- **Scripts**: show a script's signs as a chart in its traditional order (abjad / futhark / Gardiner list). Link alphabet letters to the words that start with them. Add a "type in this script" keyboard built from the sign readings.
 - **UI polish**: keyboard-first search with instant results, virtual keyboard for Greek / Hebrew input, dark-mode review, mobile layout for the entry page.
 
 ## 5. Engineering
 
 - Tests: `vitest` for `normalizeForSearch`, the seed validator and the queries (run against PGlite — no services needed).
 - CI (GitHub Actions): install, typecheck, lint, `db:setup` on PGlite, `next build`.
-- Commit generated migrations (`packages/db/drizzle`) with every schema change; never edit them by hand.
+- Commit generated migrations (`packages/db/drizzle`) with every schema change. Edit them by hand only to add data a migration needs. For example, `0003_scripts.sql` inserts the `cuneiform` row before `signs.script_id` gets its foreign key.
 - Production: a `Dockerfile` for `apps/web` (standalone output), compose profile with Postgres backups, and a managed Postgres option.
 - Developer ergonomics: an Adminer / pgweb service in `docker-compose.yml`, a `pnpm db:reset` script, and Prettier on commit.

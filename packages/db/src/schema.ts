@@ -212,8 +212,27 @@ export const entryRelations = pgTable(
 )
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Cuneiform signs (from the Oracc Sign List) and their readings
+ * Writing systems, their signs (cuneiform from the Oracc Sign List,
+ * proto-cuneiform, Egyptian hieroglyphs, alphabets, syllabaries …) and the
+ * signs' readings
  * ────────────────────────────────────────────────────────────────────────── */
+
+export const scripts = pgTable("scripts", {
+  /** URL slug: cuneiform, proto-cuneiform, egyptian-hieroglyphs, phoenician … */
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  /** ISO 15924 code when one exists (Xsux, Egyp, Phnx …); the same code as `languages.script`. */
+  iso15924: text("iso15924"),
+  /** logo-syllabary, logography, syllabary, abjad, alphabet, abugida … */
+  kind: text("kind"),
+  direction: textDirectionEnum("direction").notNull().default("ltr"),
+  period: text("period"),
+  region: text("region"),
+  description: text("description"),
+  /** The Unicode block(s) the script is encoded in, for display: "U+12000–1254F". */
+  unicodeRange: text("unicode_range"),
+  sortOrder: integer("sort_order").notNull().default(0),
+})
 
 export type SignLink = { label: string; url: string }
 
@@ -221,7 +240,12 @@ export const signs = pgTable(
   "signs",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    /** Oracc sign name: LUGAL, |SAL.TUG₂|, LAK-025, LUGAL@g … */
+    /** The writing system; sign names are unique within it. */
+    scriptId: text("script_id")
+      .notNull()
+      .default("cuneiform")
+      .references(() => scripts.id, { onDelete: "cascade" }),
+    /** Sign name: LUGAL, |SAL.TUG₂|, LAK-025, LUGAL@g (Oracc); A1 (Gardiner); ALEF; B008 (Linear B) … */
     name: text("name").notNull(),
     /** Oracc object id (o0000434) — the stable identifier. */
     oid: text("oid"),
@@ -239,6 +263,12 @@ export const signs = pgTable(
     /** Sign-list numbers: { MZL: ["266"], ABZ: ["151"], LAK: ["165"] … }. */
     listNumbers: jsonb("list_numbers").$type<Record<string, string[]>>(),
     links: jsonb("links").$type<SignLink[]>(),
+    /** What the sign depicts ("Man, seated, hand to mouth") or how it is built. */
+    description: text("description"),
+    /** Grouping within the script: Gardiner category, letter / syllable / logogram / numeral … */
+    category: text("category"),
+    /** Position in the script's traditional order (alphabets); null sorts by name. */
+    sortOrder: integer("sort_order"),
     notes: text("notes"),
     sourceId: text("source_id").references(() => sources.id, { onDelete: "set null" }),
     sourceRef: text("source_ref"),
@@ -246,7 +276,7 @@ export const signs = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique("signs_name_uq").on(t.name),
+    unique("signs_script_name_uq").on(t.scriptId, t.name),
     index("signs_unicode_idx").on(t.unicode),
     index("signs_parent_idx").on(t.parentId),
   ]
@@ -330,7 +360,12 @@ export const entryRelationsRelations = relations(entryRelations, ({ one }) => ({
   }),
 }))
 
+export const scriptsRelations = relations(scripts, ({ many }) => ({
+  signs: many(signs),
+}))
+
 export const signsRelations = relations(signs, ({ one, many }) => ({
+  script: one(scripts, { fields: [signs.scriptId], references: [scripts.id] }),
   readings: many(signReadings),
   parent: one(signs, { fields: [signs.parentId], references: [signs.id], relationName: "forms" }),
   forms: many(signs, { relationName: "forms" }),
@@ -355,6 +390,8 @@ export type Sense = typeof senses.$inferSelect
 export type NewSense = typeof senses.$inferInsert
 export type EntryComponent = typeof entryComponents.$inferSelect
 export type EntryRelation = typeof entryRelations.$inferSelect
+export type Script = typeof scripts.$inferSelect
+export type NewScript = typeof scripts.$inferInsert
 export type Sign = typeof signs.$inferSelect
 export type NewSign = typeof signs.$inferInsert
 export type SignReading = typeof signReadings.$inferSelect
