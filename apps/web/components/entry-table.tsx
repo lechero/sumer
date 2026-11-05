@@ -25,14 +25,14 @@ type Props = {
 
 export function EntryTable({ rows, showLanguage = true, emptyMessage = "No entries.", breakdowns }: Props) {
   if (rows.length === 0) {
-    return <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">{emptyMessage}</p>
+    return <p className="glass rounded-2xl border-dashed p-10 text-center text-sm text-muted-foreground">{emptyMessage}</p>
   }
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div className="glass overflow-x-auto rounded-2xl">
       <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[14rem]">Headword</TableHead>
+        <TableHeader className="bg-muted/60 [&_th]:font-mono [&_th]:text-[0.68rem] [&_th]:font-semibold [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground [&_th]:uppercase">
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[14rem] pl-4">Headword</TableHead>
             <TableHead className="w-[8rem]">Script</TableHead>
             {showLanguage ? <TableHead className="w-[9rem]">Language</TableHead> : null}
             <TableHead className="w-[7rem]">Type</TableHead>
@@ -41,14 +41,10 @@ export function EntryTable({ rows, showLanguage = true, emptyMessage = "No entri
         </TableHeader>
         <TableBody>
           {rows.map((e) => (
-            <TableRow key={e.id}>
-              <TableCell className="align-top">
-                <Link href={`/entries/${e.id}`} className="font-medium underline-offset-4 hover:underline">
-                  {e.language.script === "Latn" || !e.transliteration ? (
-                    <NativeText text={e.headword} script={e.language.script} direction={e.language.direction} />
-                  ) : (
-                    <NativeText text={e.headword} script={e.language.script} direction={e.language.direction} />
-                  )}
+            <TableRow key={e.id} className="transition-colors hover:bg-accent/60">
+              <TableCell className="pl-4 align-top">
+                <Link href={`/entries/${e.id}`} className="font-semibold underline-offset-4 hover:text-violet hover:underline">
+                  <NativeText text={e.headword} script={e.language.script} direction={e.language.direction} />
                 </Link>
                 {e.homonymIndex > 1 ? <sup className="ml-0.5 text-muted-foreground">{e.homonymIndex}</sup> : null}
                 {e.transliteration ? <div className="text-xs text-muted-foreground">{e.transliteration}</div> : null}
@@ -61,7 +57,7 @@ export function EntryTable({ rows, showLanguage = true, emptyMessage = "No entri
                     text={e.nativeScript}
                     script={e.language.script}
                     direction={e.language.direction}
-                    className={e.language.script === "Xsux" ? "text-2xl leading-none" : "text-lg"}
+                    className={e.language.script === "Xsux" || e.language.script === "Egyp" ? "text-2xl leading-none text-amber" : "text-lg text-amber"}
                   />
                 ) : null}
               </TableCell>
@@ -78,7 +74,7 @@ export function EntryTable({ rows, showLanguage = true, emptyMessage = "No entri
                   <PosBadge pos={e.partOfSpeech} />
                 </div>
               </TableCell>
-              <TableCell className="align-top">{e.gloss}</TableCell>
+              <TableCell className="align-top text-ink-2 whitespace-normal">{e.gloss}</TableCell>
             </TableRow>
           ))}
         </TableBody>

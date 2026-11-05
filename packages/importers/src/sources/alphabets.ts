@@ -3,8 +3,9 @@
  * Unicode Character Database (names, code points) plus the conventional
  * transliteration of each letter (compiled for this dictionary). Covers
  * Ugaritic, Phoenician, Hebrew, Imperial Aramaic, Syriac, Old South Arabian,
- * Old Persian, Anatolian hieroglyphs, Linear A and B, the Cypriot syllabary,
- * Greek, Old Italic, Coptic, Gothic, Runic and Ogham.
+ * Ge'ez, Old Persian, Devanagari, Anatolian hieroglyphs, Linear A and B, the
+ * Cypriot syllabary, Greek, Old Italic, Coptic, Armenian, Early Cyrillic,
+ * Gothic, Runic and Ogham.
  */
 import { hex, unicodeNames } from "../lib/unicode"
 import { writeSignInventory, type SignInput } from "../lib/signs"
@@ -34,6 +35,7 @@ type AlphabetSpec = {
 }
 
 const SUB = "₀₁₂₃₄₅₆₇₈₉"
+const DIGITS = ["ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE"]
 const subscript = (s: string) => s.replace(/\d+$/, (d) => [...d].map((c) => SUB[Number(c)]).join(""))
 
 /** Letters of a fixed-map alphabet; numbers, punctuation and anything unmapped get a category of their own. */
@@ -127,6 +129,64 @@ const OLD_PERSIAN_LOGOGRAMS: Record<string, [string, string]> = {
   BUUMISH: ["BU", "būmiš, earth"],
 }
 
+/** Devanagari in IAST. Consonants are cited with their inherent a (ka); vowel signs by the vowel they write. */
+const DEVANAGARI_VOWELS: Record<string, string> = {
+  A: "a", AA: "ā", I: "i", II: "ī", U: "u", UU: "ū", "VOCALIC R": "ṛ", "VOCALIC RR": "ṝ", "VOCALIC L": "ḷ",
+  "VOCALIC LL": "ḹ", E: "e", AI: "ai", O: "o", AU: "au", "CANDRA E": "ê", "SHORT E": "ĕ", "CANDRA O": "ô", "SHORT O": "ŏ",
+}
+const DEVANAGARI_CONSONANTS: Record<string, string> = {
+  KA: "k", KHA: "kh", GA: "g", GHA: "gh", NGA: "ṅ", CA: "c", CHA: "ch", JA: "j", JHA: "jh", NYA: "ñ",
+  TTA: "ṭ", TTHA: "ṭh", DDA: "ḍ", DDHA: "ḍh", NNA: "ṇ", TA: "t", THA: "th", DA: "d", DHA: "dh", NA: "n", NNNA: "ṉ",
+  PA: "p", PHA: "ph", BA: "b", BHA: "bh", MA: "m", YA: "y", RA: "r", RRA: "ṟ", LA: "l", LLA: "ḷ", LLLA: "ḻ", VA: "v",
+  SHA: "ś", SSA: "ṣ", SA: "s", HA: "h", QA: "q", KHHA: "x", GHHA: "ġ", ZA: "z", DDDHA: "ṛ", RHA: "ṛh", FA: "f", YYA: "ẏ",
+}
+const DEVANAGARI_SIGNS: Record<string, [string | undefined, string]> = {
+  CANDRABINDU: ["m̐", "Nasalises the vowel before it."],
+  ANUSVARA: ["ṃ", "A nasal after the vowel, assimilating to the consonant that follows."],
+  VISARGA: ["ḥ", "A breath after the vowel."],
+  VIRAMA: [undefined, "Silences the consonant's inherent a; between consonants it makes a conjunct."],
+  NUKTA: [undefined, "A dot below that makes new consonants for sounds Sanskrit lacks (क़ qa, ज़ za)."],
+  AVAGRAHA: ["'", "Marks an a elided at a word boundary (सोऽहम् so'ham)."],
+}
+
+/** Classical Armenian in the Hübschmann–Meillet transliteration. */
+const ARMENIAN: Record<string, string> = {
+  AYB: "a", BEN: "b", GIM: "g", DA: "d", ECH: "e", ZA: "z", EH: "ē", ET: "ə", TO: "tʻ", ZHE: "ž", INI: "i",
+  LIWN: "l", XEH: "x", CA: "c", KEN: "k", HO: "h", JA: "j", GHAD: "ł", CHEH: "č", MEN: "m", YI: "y", NOW: "n",
+  SHA: "š", VO: "o", CHA: "čʻ", PEH: "p", JHEH: "ǰ", RA: "ṙ", SEH: "s", VEW: "v", TIWN: "t", REH: "r", CO: "cʻ",
+  YIWN: "w", PIWR: "pʻ", KEH: "kʻ", OH: "ō", FEH: "f",
+}
+
+/** Old Church Slavonic letters in the scholarly transliteration (Cyrillic and Cyrillic Extended-B). */
+const EARLY_CYRILLIC: Record<string, string> = {
+  A: "a", BE: "b", VE: "v", GHE: "g", DE: "d", IE: "e", ZHE: "ž", ZE: "z", I: "i", "SHORT I": "j", KA: "k",
+  EL: "l", EM: "m", EN: "n", O: "o", PE: "p", ER: "r", ES: "s", TE: "t", U: "u", EF: "f", HA: "x", TSE: "c",
+  CHE: "č", SHA: "š", SHCHA: "št", "HARD SIGN": "ŭ", YERU: "y", "SOFT SIGN": "ĭ", YU: "ju", YA: "ja",
+  "BYELORUSSIAN-UKRAINIAN I": "i", YI: "ï", JE: "j", DZE: "dz", DJE: "đ",
+  OMEGA: "ō", YAT: "ě", "IOTIFIED E": "je", "LITTLE YUS": "ę", "IOTIFIED LITTLE YUS": "ję", "BIG YUS": "ǫ",
+  "IOTIFIED BIG YUS": "jǫ", KSI: "ks", PSI: "ps", FITA: "θ", IZHITSA: "ü", "IZHITSA WITH DOUBLE GRAVE ACCENT": "ü",
+  UK: "u", "ROUND OMEGA": "ō", "OMEGA WITH TITLO": "ot", OT: "ot", KOPPA: "q",
+  ZEMLYA: "z", DZELO: "dz", "REVERSED DZE": "dz", IOTA: "i", DJERV: "đ", "MONOGRAPH UK": "u", "BROAD OMEGA": "ō",
+  "NEUTRAL YER": "ŭ", "YERU WITH BACK YER": "y", "IOTIFIED YAT": "jě", "REVERSED YU": "ju", "IOTIFIED A": "ja",
+  "CLOSED LITTLE YUS": "ę", "BLENDED YUS": "ǫ", "IOTIFIED CLOSED LITTLE YUS": "ję", YN: "y", "REVERSED TSE": "c",
+  "SOFT DE": "ď", "SOFT EL": "ľ", "SOFT EM": "m'", "MONOCULAR O": "o", "BINOCULAR O": "o", "DOUBLE MONOCULAR O": "o",
+}
+
+/** Ge'ez syllables: consonant from the Unicode name, vowel from its order (bä bu bi ba be bə bo). */
+const ETHIOPIC_CONSONANTS: Record<string, string> = {
+  H: "h", L: "l", HH: "ḥ", M: "m", SZ: "ś", R: "r", S: "s", SH: "š", Q: "q", QH: "q̱", B: "b", V: "v", T: "t",
+  C: "č", X: "ḫ", N: "n", NY: "ñ", GLOTTAL: "ʾ", K: "k", KX: "ḵ", W: "w", PHARYNGEAL: "ʿ", Z: "z", ZH: "ž",
+  Y: "y", D: "d", DD: "ḍ", J: "ǧ", G: "g", GG: "ŋ", TH: "ṭ", CH: "č̣", PH: "p̣", TS: "ṣ", TZ: "ṣ́", F: "f", P: "p",
+}
+const ETHIOPIC_VOWELS: Record<string, string> = { A: "ä", U: "u", I: "i", AA: "a", EE: "e", E: "ə", O: "o", OA: "oa" }
+
+function ethiopicSyllable(name: string): string | undefined {
+  const m = name.replace(/ /g, "").match(/^(GLOTTAL|PHARYNGEAL|[A-Z]+?)(W?)(AA|EE|OA|A|U|I|E|O)$/)
+  if (!m) return undefined
+  const consonant = ETHIOPIC_CONSONANTS[m[1]!]
+  return consonant ? `${consonant}${m[2] ? "ʷ" : ""}${ETHIOPIC_VOWELS[m[3]!]}` : undefined
+}
+
 /** Linear B syllabic values by B-number, filled from the Linear B names and reused for Linear A's AB signs. */
 const LINEAR_B_VALUES = new Map<string, string>()
 
@@ -178,6 +238,46 @@ const SPECS: AlphabetSpec[] = [
           name: number ?? rest,
           description: meaning ? `${type === "IDEOGRAM" ? "Logogram" : "Monogram"}: ${meaning.toLowerCase().replace(/ b\d+.*$/, "")}` : undefined,
         }
+      return null
+    },
+  },
+  {
+    script: "ethiopic",
+    ranges: [[0x1200, 0x137c]],
+    prefix: "ETHIOPIC ",
+    language: "gez",
+    classify: (rest) => {
+      const m = rest.match(/^SYLLABLE (.+)$/)
+      if (m) return { category: "syllable", name: m[1], reading: ethiopicSyllable(m[1]!) }
+      if (/^DIGIT |^NUMBER /.test(rest)) return { category: "numeral", name: rest }
+      if (rest.startsWith("COMBINING ")) return { category: "mark", name: rest.slice("COMBINING ".length) }
+      return { category: "punctuation", name: rest }
+    },
+  },
+  {
+    script: "devanagari",
+    ranges: [[0x0900, 0x097f]],
+    prefix: "DEVANAGARI ",
+    language: "san",
+    classify: (rest) => {
+      const letter = rest.match(/^LETTER (.+)$/)?.[1]
+      if (letter) {
+        if (DEVANAGARI_VOWELS[letter]) return { category: "vowel", name: letter, reading: DEVANAGARI_VOWELS[letter] }
+        const c = DEVANAGARI_CONSONANTS[letter]
+        return c ? { category: "consonant", name: letter, reading: `${c}a` } : { category: "additional letter", name: letter }
+      }
+      const vowelSign = rest.match(/^VOWEL SIGN (.+)$/)?.[1]
+      if (vowelSign) return { category: "vowel sign", name: rest, reading: DEVANAGARI_VOWELS[vowelSign] }
+      const sign = rest.match(/^SIGN (.+)$/)?.[1]
+      if (sign) {
+        const [reading, description] = DEVANAGARI_SIGNS[sign] ?? [undefined, undefined]
+        return { category: "sign", name: sign, reading, description }
+      }
+      const digit = rest.match(/^DIGIT (.+)$/)?.[1]
+      if (digit) return { category: "numeral", name: rest, reading: String(DIGITS.indexOf(digit)) }
+      if (rest === "OM") return { category: "ligature", name: rest, reading: "oṃ" }
+      if (/DANDA|ABBREVIATION|SPACING DOT/.test(rest)) return { category: "punctuation", name: rest }
+      if (/STRESS SIGN|ACCENT/.test(rest)) return { category: "accent", name: rest }
       return null
     },
   },
@@ -238,6 +338,21 @@ const SPECS: AlphabetSpec[] = [
     // capitals sit on the even code points of both ranges; the small letter carries the sign
     classify: (rest, cp) => (cp % 2 === 0 ? null : lettered(COPTIC)(rest)),
   },
+  {
+    script: "armenian",
+    ranges: [[0x0561, 0x0587], [0x055b, 0x055f]],
+    prefix: "ARMENIAN ",
+    language: "xcl",
+    classify: lettered(ARMENIAN, (rest) => (rest === "SMALL LIGATURE ECH YIWN" ? { category: "ligature", name: "ECH YIWN", reading: "ew" } : null)),
+  },
+  {
+    script: "early-cyrillic",
+    // the small letters; capitals share their sign
+    ranges: [[0x0430, 0x045f], [0x0460, 0x0481], [0xa640, 0xa66d]],
+    prefix: "CYRILLIC ",
+    language: "chu",
+    classify: (rest) => (rest.startsWith("CAPITAL ") ? null : lettered(EARLY_CYRILLIC)(rest)),
+  },
   { script: "gothic", ranges: [[0x10330, 0x1034a]], prefix: "GOTHIC ", classify: lettered(GOTHIC), language: "got" },
   {
     script: "runic",
@@ -259,7 +374,7 @@ const SPECS: AlphabetSpec[] = [
 export const alphabetsImporter: Importer = {
   id: "alphabets",
   language: "*",
-  description: "Unicode → letters and syllables of 18 ancient scripts (Phoenician, Ugaritic, Linear B …) with transliterations",
+  description: "Unicode → letters and syllables of 21 ancient scripts (Phoenician, Ugaritic, Linear B …) with transliterations",
   async run({ db, log, limit, offline, prune }) {
     const names = await unicodeNames({ offline, log })
     for (const spec of SPECS) {

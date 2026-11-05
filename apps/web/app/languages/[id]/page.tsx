@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { getLanguage, listEntries, type EntryKind } from "@workspace/db"
+import { countLanguageEntries, getLanguage, listEntries, type EntryKind } from "@workspace/db"
 import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 
@@ -9,6 +9,7 @@ import { DbProblem } from "@/components/db-problem"
 import { EntryTable } from "@/components/entry-table"
 import { cuneiformBreakdowns } from "@/lib/breakdowns"
 import { NativeText } from "@/components/native-text"
+import { HeroGlyph, PageHero } from "@/components/page-hero"
 import { SearchForm } from "@/components/search-form"
 import { first, withDb } from "@/lib/data"
 
@@ -31,6 +32,20 @@ function parseKind(v: string | undefined): EntryKind | undefined {
   return v === "word" || v === "part" ? v : undefined
 }
 
+/** "𒅴𒂠 (eme-gir₁₅)" → ["𒅴𒂠", "eme-gir₁₅"]: the script large, its reading small underneath. */
+function splitNative(name: string): [string, string | undefined] {
+  const m = name.match(/^(.+?)\s*\(([^)]+)\)$/)
+  return m ? [m[1]!, m[2]] : [name, undefined]
+}
+
+/** "c. 2500 BCE – 100 CE (Old Akkadian …)" → ["c. 2500 BCE – 100 CE", "Old Akkadian …"]. */
+function splitPeriod(period: string): [string, string | undefined] {
+  const m = period.match(/^(.+?)(?:\s+\(|;\s*|\s+(?=(?:as|in)\s))(.+)$/)
+  if (!m) return [period, undefined]
+  const rest = m[2]!
+  return [m[1]!, rest.endsWith(")") && !rest.includes("(") ? rest.slice(0, -1) : rest]
+}
+
 export default async function LanguagePage({ params, searchParams }: Props) {
   const { id } = await params
   const sp = await searchParams
@@ -42,12 +57,16 @@ export default async function LanguagePage({ params, searchParams }: Props) {
     const language = await getLanguage(db, id)
     if (!language) return null
     const list = await listEntries(db, { languageId: id, kind, q, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE })
-    return { language, list, breakdowns: await cuneiformBreakdowns(db, list.rows) }
+    const counts = await countLanguageEntries(db, id)
+    return { language, list, counts, breakdowns: await cuneiformBreakdowns(db, list.rows) }
   })
 
   if (!result.ok) return <DbProblem result={result} />
   if (!result.data) notFound()
-  const { language, list, breakdowns } = result.data
+  const { language, list, counts, breakdowns } = result.data
+  const { words, parts } = counts
+  const [nativeScript, nativeReading] = language.nativeName ? splitNative(language.nativeName) : [undefined, undefined]
+  const [periodRange, periodNote] = language.period ? splitPeriod(language.period) : [undefined, undefined]
   const pageCount = Math.max(1, Math.ceil(list.total / PAGE_SIZE))
 
   const tabHref = (k?: EntryKind) => {
@@ -68,30 +87,41 @@ export default async function LanguagePage({ params, searchParams }: Props) {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground">Languages</Link> / {language.name}
-        </p>
-        <h1 className="flex flex-wrap items-baseline gap-x-4 text-3xl font-semibold tracking-tight">
-          <span>{language.name}</span>
-          <NativeText
-            text={language.nativeName}
-            script={language.script}
-            direction={language.direction}
-            className="text-xl font-normal text-muted-foreground"
-          />
-        </h1>
-        {language.description ? <p className="max-w-3xl text-muted-foreground">{language.description}</p> : null}
-        <dl className="grid gap-x-8 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
-          {language.family ? (<><dt className="text-muted-foreground">Family</dt><dd>{language.family}</dd></>) : null}
-          {language.period ? (<><dt className="text-muted-foreground">Period</dt><dd>{language.period}</dd></>) : null}
-          <dt className="text-muted-foreground">Script</dt>
-          <dd>{language.scriptName ?? language.script} ({language.direction.toUpperCase()})</dd>
-        </dl>
-      </header>
+      <PageHero
+        eyebrow={
+          <>
+            <Link href="/" className="hover:text-(--hero-ink)">Languages</Link>
+            <span className="opacity-60">/</span>
+            <span>{language.family ?? "Language"}</span>
+          </>
+        }
+        title={language.name}
+        lede={language.description}
+        art={
+          nativeScript ? (
+            <div className="grid justify-items-center gap-1">
+              <HeroGlyph
+                className={cn(
+                  "max-w-[20rem] text-center text-amber",
+                  [...nativeScript].length > 12 ? "text-3xl sm:text-4xl" : [...nativeScript].length > 6 ? "text-5xl sm:text-6xl" : "text-6xl sm:text-8xl"
+                )}
+              >
+                <NativeText text={nativeScript} script={language.script} direction={language.direction} />
+              </HeroGlyph>
+              {nativeReading ? <p className="font-mono text-sm text-(--hero-dim)">{nativeReading}</p> : null}
+            </div>
+          ) : undefined
+        }
+        stats={[
+          { label: "Words", value: words.toLocaleString(), featured: true },
+          { label: "Word parts", value: parts.toLocaleString() },
+          ...(periodRange ? [{ label: "Period", value: periodRange, note: periodNote }] : []),
+          { label: "Script", value: language.scriptName ?? language.script, note: language.direction === "rtl" ? "right to left" : "left to right" },
+        ]}
+      />
 
       <div className="flex flex-wrap items-center gap-3">
-        <nav className="flex gap-1 rounded-lg border p-1" aria-label="Entry kind">
+        <nav className="glass flex gap-1 rounded-full p-1" aria-label="Entry kind">
           {([
             [undefined, "All"],
             ["word", "Words"],
@@ -101,8 +131,10 @@ export default async function LanguagePage({ params, searchParams }: Props) {
               key={label}
               href={tabHref(k)}
               className={cn(
-                "rounded-md px-3 py-1 text-sm transition-colors",
-                kind === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                "rounded-full px-4 py-1 text-sm font-medium transition-colors",
+                kind === k
+                  ? "bg-linear-to-br from-violet to-ember text-white shadow-[0_4px_14px_color-mix(in_srgb,var(--violet)_35%,transparent)]"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               {label}
@@ -112,7 +144,7 @@ export default async function LanguagePage({ params, searchParams }: Props) {
         <div className="min-w-[16rem] flex-1 sm:max-w-md">
           <SearchForm defaultValue={q} languageId={id} kind={kind} compact placeholder={`Search ${language.name}…`} />
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="font-mono text-xs text-muted-foreground">
           {list.total.toLocaleString()} {kind === "part" ? "word parts" : kind === "word" ? "words" : "entries"}
           {q ? ` matching “${q}”` : ""}
         </p>

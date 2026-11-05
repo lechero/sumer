@@ -1,13 +1,27 @@
 import Link from "next/link"
 import { countEntries, countSigns, listLanguages } from "@workspace/db"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card"
 
+import { Chip } from "@/components/chip"
 import { DbProblem } from "@/components/db-problem"
 import { NativeText } from "@/components/native-text"
+import { HeroGlyph, PageHero, Shimmer } from "@/components/page-hero"
 import { SearchForm } from "@/components/search-form"
+import { Section } from "@/components/section"
 import { withDb } from "@/lib/data"
 
 export const dynamic = "force-dynamic"
+
+/** Card top bars, cycling like the report's cards. */
+const BARS = [
+  "linear-gradient(90deg, var(--violet), var(--rose))",
+  "linear-gradient(90deg, var(--amber), var(--ember))",
+  "linear-gradient(90deg, var(--mint), var(--sky))",
+  "linear-gradient(90deg, var(--rose), var(--violet))",
+]
+
+const EXAMPLES = ["king", "lugal", "𒈗", "e2-gal", "λόγος", "שלום", "agni", "dhamma", "ꜥnḫ", "cyning"]
+
+const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 })
 
 export default async function HomePage() {
   const result = await withDb(async (db) => ({
@@ -16,107 +30,149 @@ export default async function HomePage() {
     signs: await countSigns(db),
   }))
 
-  return (
-    <div className="space-y-12">
-      <section className="space-y-5">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Words and word parts of the ancient world
-          </h1>
-          <p className="max-w-2xl text-muted-foreground">
-            A dictionary that treats a language as words <em>and</em> the pieces they are built from —
-            roots, affixes, clitics, determinatives — and records how words travelled between languages:
-            Sumerian <span className="font-cuneiform">𒂍𒃲</span> e₂-gal became Akkadian <em>ekallu</em> became
-            Hebrew <span className="font-hebrew">הֵיכָל</span>.
-          </p>
-        </div>
-        <div className="max-w-xl">
-          <SearchForm />
-        </div>
-        {result.ok ? (
-          <p className="text-sm text-muted-foreground">
-            {result.data.totals.words.toLocaleString()} words · {result.data.totals.parts.toLocaleString()} word parts ·{" "}
-            {result.data.languages.length} languages
-          </p>
-        ) : null}
-      </section>
+  if (!result.ok) return <DbProblem result={result} />
+  const { languages, totals, signs } = result.data
+  const shown = languages.filter((l) => l.wordCount + l.partCount > 0)
+  // size meter: log scale, so 400 Hittite words still show next to 200k Sanskrit ones
+  const maxLog = Math.log10(Math.max(...shown.map((l) => l.wordCount + l.partCount), 10))
 
-      {!result.ok ? (
-        <DbProblem result={result} />
-      ) : (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight">Languages</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {result.data.languages.map((lang) => (
-              <Link key={lang.id} href={`/languages/${lang.id}`} className="group">
-                <Card className="h-full transition-colors group-hover:bg-muted/50">
-                  <CardHeader>
-                    <CardTitle className="flex flex-wrap items-baseline gap-x-3">
-                      <span>{lang.name}</span>
-                      <NativeText
-                        text={lang.nativeName}
-                        script={lang.script}
-                        direction={lang.direction}
-                        className="text-base font-normal text-muted-foreground"
-                      />
-                    </CardTitle>
-                    <CardDescription>
-                      {lang.family}
-                      {lang.period ? ` · ${lang.period}` : ""}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {lang.description ? <p className="text-sm text-muted-foreground">{lang.description}</p> : null}
-                    <p className="text-sm">
-                      <span className="font-medium">{lang.wordCount.toLocaleString()}</span> words ·{" "}
-                      <span className="font-medium">{lang.partCount.toLocaleString()}</span> word parts
-                    </p>
-                  </CardContent>
-                </Card>
+  return (
+    <div className="space-y-16">
+      <PageHero
+        eyebrow={
+          <>
+            <span className="font-cuneiform text-base normal-case tracking-normal text-amber">𒅴𒂠</span>
+            <span>An ancient-languages library</span>
+            <span className="opacity-60">·</span>
+            <span>{shown.length} languages</span>
+          </>
+        }
+        title={
+          <>
+            Words and word parts of the <Shimmer>ancient world</Shimmer>
+          </>
+        }
+        lede={
+          <>
+            Every entry is a word <em>or</em> one of the pieces words are built from (roots, affixes, determinatives), linked to how
+            it travelled between languages. Sumerian <span className="font-cuneiform">𒂍𒃲</span> e₂-gal became Akkadian{" "}
+            <em>ekallu</em> became Hebrew <span className="font-hebrew">הֵיכָל</span>.
+          </>
+        }
+        art={<HeroGlyph className="font-cuneiform text-6xl text-amber sm:text-[7rem] lg:text-[9rem]">𒂍𒃲</HeroGlyph>}
+        stats={[
+          { label: "Entries", value: totals.total.toLocaleString(), note: `${compact.format(totals.words)} words · ${compact.format(totals.parts)} parts`, featured: true },
+          { label: "Languages", value: shown.length, note: `${totals.sources} sources` },
+          { label: "Links", value: totals.relations.toLocaleString(), note: "synonyms, cognates, loans" },
+          { label: "Signs", value: signs.total.toLocaleString(), note: `${signs.scripts} scripts` },
+          { label: "Readings", value: signs.readings.toLocaleString(), note: "sign values" },
+        ]}
+      >
+        <div className="max-w-xl space-y-3">
+          <SearchForm />
+          <div className="flex flex-wrap gap-1.5">
+            {EXAMPLES.map((s) => (
+              <Link
+                key={s}
+                href={`/search?q=${encodeURIComponent(s)}`}
+                className="rounded-full border border-white/15 bg-white/6 px-2.5 py-0.5 font-mono text-xs text-(--hero-dim) transition-colors hover:border-amber/60 hover:text-(--hero-ink) [.light_&]:border-foreground/10 [.light_&]:bg-white/60"
+              >
+                {s}
               </Link>
             ))}
           </div>
-        </section>
-      )}
+        </div>
+      </PageHero>
 
-      {result.ok && result.data.signs.encoded > 0 ? (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight">Scripts and signs</h2>
-          <Link href="/scripts" className="group block">
-            <Card className="transition-colors group-hover:bg-muted/50">
-              <CardHeader>
-                <CardTitle className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-                  <span className="font-cuneiform text-3xl font-normal leading-none" aria-hidden>𒀭𒂗𒆤</span>
-                  <span className="font-egyptian text-3xl font-normal leading-none" aria-hidden>𓂀𓅓𓆣</span>
-                  <span className="font-phoenician text-3xl font-normal leading-none" aria-hidden>𐤀𐤁𐤂</span>
-                  <span className="font-linear-b text-3xl font-normal leading-none" aria-hidden>𐀀𐀁𐀂</span>
-                  <span>Writing systems</span>
-                </CardTitle>
-                <CardDescription>
-                  {result.data.signs.total.toLocaleString()} signs in {result.data.signs.scripts} scripts with{" "}
-                  {result.data.signs.readings.toLocaleString()} readings: cuneiform and proto-cuneiform, Egyptian hieroglyphs, Linear A
-                  and B, and the alphabets from Ugaritic and Phoenician to Gothic and runes.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+      <Section num={1} title="Languages" hint="From the first written words of Uruk to the sagas of Iceland. Each card shows how much of the language is here.">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {shown.map((lang, i) => {
+            const total = lang.wordCount + lang.partCount
+            const meter = Math.max(4, (Math.log10(Math.max(total, 1)) / maxLog) * 100)
+            // short native names sit beside the title, longer ones ("𒅴𒂠 (eme-gir₁₅)") get their own line
+            const short = !!lang.nativeName && [...lang.nativeName].length <= 12
+            return (
+              <Link
+                key={lang.id}
+                href={`/languages/${lang.id}`}
+                className="glass top-bar lift group flex flex-col gap-3 rounded-2xl p-5"
+                style={{ "--bar": BARS[i % BARS.length] } as React.CSSProperties}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-bold tracking-tight group-hover:text-violet">{lang.name}</h3>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {[lang.family, lang.period].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  {short ? (
+                    <NativeText
+                      text={lang.nativeName}
+                      script={lang.script}
+                      direction={lang.direction}
+                      className="shrink-0 text-xl leading-tight text-amber group-hover:glyph-glow"
+                    />
+                  ) : null}
+                </div>
+                {!short && lang.nativeName ? (
+                  <NativeText
+                    as="p"
+                    text={lang.nativeName}
+                    script={lang.script}
+                    direction={lang.direction}
+                    className="-mt-1 text-lg leading-tight text-amber group-hover:glyph-glow"
+                  />
+                ) : null}
+                {lang.description ? <p className="line-clamp-2 text-sm text-ink-2">{lang.description}</p> : null}
+                <div className="mt-auto space-y-2">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
+                    <div className="h-full rounded-full" style={{ width: `${meter}%`, backgroundImage: BARS[i % BARS.length] }} />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Chip tone="violet">{lang.wordCount.toLocaleString()} words</Chip>
+                    {lang.partCount ? <Chip tone="amber">{lang.partCount.toLocaleString()} parts</Chip> : null}
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      </Section>
+
+      {signs.encoded > 0 ? (
+        <Section num={2} title="Scripts and signs" hint="Cuneiform, hieroglyphs, Linear B and the alphabets, each sign with its readings and the words written with it.">
+          <Link href="/scripts" className="glass lift group grid gap-6 rounded-2xl p-6 sm:grid-cols-[auto_1fr] sm:items-center">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-amber" aria-hidden>
+              <span className="font-cuneiform text-4xl leading-none group-hover:glyph-glow">𒀭𒂗𒆤</span>
+              <span className="font-egyptian text-4xl leading-none group-hover:glyph-glow">𓂀𓅓𓆣</span>
+              <span className="font-linear-b text-4xl leading-none group-hover:glyph-glow">𐀀𐀁𐀂</span>
+              <span className="font-runic text-4xl leading-none group-hover:glyph-glow">ᚠᚢᚦ</span>
+            </div>
+            <div className="space-y-1">
+              <p className="text-lg font-bold tracking-tight group-hover:text-violet">Writing systems →</p>
+              <p className="text-sm text-ink-2">
+                {signs.total.toLocaleString()} signs in {signs.scripts} scripts with {signs.readings.toLocaleString()} readings, from the
+                proto-cuneiform tablets of Uruk to the runes and ogham of northern Europe.
+              </p>
+            </div>
           </Link>
-        </section>
+        </Section>
       ) : null}
 
-      <section className="grid gap-4 rounded-lg border bg-muted/30 p-6 sm:grid-cols-3">
-        <div>
-          <h3 className="font-medium">Words</h3>
-          <p className="text-sm text-muted-foreground">Lemmas with glosses, senses, definitions and etymologies, in native script and transliteration.</p>
+      <Section num={3} title="How it fits together">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[
+            ["Words", "Lemmas with glosses, senses, definitions and etymologies, in native script and transliteration.", "var(--violet)"],
+            ["Word parts", "Roots, prefixes, suffixes, clitics, patterns and determinatives, linked to the words they build.", "var(--amber)"],
+            ["Connections", "Synonyms, loans, cognates and translation equivalents across languages, each with its source and confidence.", "var(--mint)"],
+          ].map(([title, text, color]) => (
+            <div key={title} className="glass rounded-2xl border-t-[3px] p-5" style={{ borderTopColor: color }}>
+              <h3 className="font-bold">{title}</h3>
+              <p className="mt-1.5 text-sm text-ink-2">{text}</p>
+            </div>
+          ))}
         </div>
-        <div>
-          <h3 className="font-medium">Word parts</h3>
-          <p className="text-sm text-muted-foreground">Roots, prefixes, suffixes, clitics, patterns and determinatives, linked to the words they build.</p>
-        </div>
-        <div>
-          <h3 className="font-medium">Connections</h3>
-          <p className="text-sm text-muted-foreground">Loans, cognates and translation equivalents across languages, each with a confidence flag.</p>
-        </div>
-      </section>
+      </Section>
     </div>
   )
 }

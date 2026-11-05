@@ -45,7 +45,7 @@ export function spellingKey(s: string): string {
 }
 
 /** Scripts whose vowels are combining marks (Indic, Brahmi …) or pointed abjads: search keys would merge words. */
-const VOWEL_MARK_SCRIPT = /[\u0900-\u0DFF\u1000-\u109F\u1780-\u17FF\u0E00-\u0EFF\u{11000}-\u{1107F}\u0591-\u05C7\u0610-\u061A\u064B-\u065F\u0670\u0730-\u074A]/u
+export const VOWEL_MARK_SCRIPT = /[\u0900-\u0DFF\u1000-\u109F\u1780-\u17FF\u0E00-\u0EFF\u{11000}-\u{1107F}\u0591-\u05C7\u0610-\u061A\u064B-\u065F\u0670\u0730-\u074A]/u
 
 function add(map: Map<string, string[]>, k: string | null | undefined, id: string) {
   if (!k) return

@@ -1,33 +1,21 @@
 import Link from "next/link"
 
+import { NavLinks } from "@/components/nav-links"
 import { SearchForm } from "@/components/search-form"
-
-const NAV = [
-  { href: "/", label: "Languages" },
-  { href: "/scripts", label: "Scripts" },
-  { href: "/search", label: "Search" },
-  { href: "/next-steps", label: "Next steps" },
-]
 
 export function SiteHeader() {
   return (
-    <header className="border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
-        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <span className="font-cuneiform text-2xl leading-none" aria-hidden>
+    <header className="sticky top-0 z-30 border-b border-border bg-background/75 backdrop-blur-xl backdrop-saturate-150">
+      <div className="mx-auto flex w-full max-w-6xl items-center gap-x-6 gap-y-2 overflow-x-auto px-4 py-2.5 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:px-6">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5 text-[1.05rem] font-bold tracking-tight">
+          <span className="font-cuneiform glyph-glow text-2xl leading-none text-amber" aria-hidden>
             𒅴𒂠
           </span>
           <span>Sumer</span>
-          <span className="hidden text-muted-foreground font-normal sm:inline">· ancient languages dictionary</span>
+          <span className="hidden font-medium text-muted-foreground lg:inline">· ancient languages library</span>
         </Link>
-        <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-          {NAV.map((item) => (
-            <Link key={item.href} href={item.href} className="transition-colors hover:text-foreground">
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="ml-auto w-full sm:w-72">
+        <NavLinks />
+        <div className="ml-auto hidden w-72 sm:block">
           <SearchForm compact />
         </div>
       </div>

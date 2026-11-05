@@ -21,11 +21,24 @@
  *   - ref = `<lang>:<page title>:<pos>:<n>` (n = nth record with that title + POS).
  * Etymology templates become relations (bor/lbor/slbor → loan_from,
  * inh/der/uder → derived_from, cog → cognate_of, plus the {{etymon}} chains);
- * {{ncog}} / {{noncog}} mark NON-cognates and are ignored.
+ * {{ncog}} / {{noncog}} mark NON-cognates and are ignored. The lemma's
+ * synonyms, antonyms, derived and related terms become synonym_of / antonym_of /
+ * derived_from / see_also relations inside the language.
+ *
+ * Two modes per language:
+ *   - entries: Wiktionary is the dictionary (Hittite, Gothic, PIE …) and creates the entries;
+ *   - enrich: a scholarly dictionary already holds the language (Latin from Lewis & Short,
+ *     Greek from LSJ …). Each Wiktionary lemma is matched to that dictionary's entry and
+ *     only adds relations, plus an etymology or hieroglyphic spelling the entry lacks.
+ *     A language switches to enrich as soon as another source has entries for it, and
+ *     the Wiktionary entries it held before are removed.
  */
-import { and, eq, isNotNull } from "drizzle-orm"
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm"
 import {
+  buildSearchKey,
+  chunk,
   entries as entriesTable,
+  normalizeForSearch,
   upsertDataset,
   type Confidence,
   type Database,
@@ -41,7 +54,7 @@ import {
 import { download } from "../lib/cache"
 import { extractHiero, loadHieroglyphTables, mdcToUnicode, type HieroglyphTables } from "../lib/egyptian"
 import { iterateJsonLines } from "../lib/jsonl"
-import { EntryResolver, pruneRelations, writeRelations, type RelationRow } from "../lib/links"
+import { EntryResolver, pruneRelations, spellingKey, VOWEL_MARK_SCRIPT, writeRelations, type RelationRow } from "../lib/links"
 import { truncate, uniq } from "../lib/text"
 import type { Importer, ImporterContext } from "../registry"
 
@@ -54,8 +67,9 @@ export const wiktionarySource = {
     'Ylonen, Tatu. 2022. "Wiktextract: Wiktionary as Machine-Readable Structured Data." Proceedings of the 13th Language Resources and Evaluation Conference (LREC 2022), 1317–1325. Data: English Wiktionary contributors, extracted by Kaikki.org.',
 }
 
-export type WiktionaryLanguage = {
-  language: NewLanguage
+/** A Kaikki dump and how to read it. */
+export type WiktionaryDump = {
+  language: { id: string; name: string }
   /** Wiktionary language code (sa, cu, pi …) when it differs from our id. */
   wikt?: string
   /** Kaikki.org language name (directory and file name). */
@@ -67,6 +81,9 @@ export type WiktionaryLanguage = {
   /** Lemmas are Egyptological transliteration; hieroglyphs come from the head template's MdC. */
   hieroglyphs?: boolean
 }
+
+/** A language Wiktionary can supply entries for (it defines the language row). */
+export type WiktionaryLanguage = WiktionaryDump & { language: NewLanguage }
 
 const NEAR_EAST = "Afro-Asiatic › Semitic"
 
@@ -412,7 +429,11 @@ export const WIKTIONARY_LANGUAGES: WiktionaryLanguage[] = [
 
 type WxTemplate = { name: string; args?: Record<string, string>; expansion?: string }
 type WxForm = { form: string; tags?: string[]; source?: string }
+/** A synonym / antonym / derived / related term. */
+type WxTerm = { word?: string; roman?: string; alt?: string; tags?: string[]; sense?: string }
 type WxSense = {
+  synonyms?: WxTerm[]
+  antonyms?: WxTerm[]
   glosses?: string[]
   tags?: string[]
   topics?: string[]
@@ -429,6 +450,10 @@ type WxEntry = {
   head_templates?: WxTemplate[]
   etymology_text?: string
   etymology_templates?: WxTemplate[]
+  synonyms?: WxTerm[]
+  antonyms?: WxTerm[]
+  derived?: WxTerm[]
+  related?: WxTerm[]
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -566,6 +591,8 @@ export type LinkCandidate = {
   type: RelationType
   confidence: Confidence
   template: string
+  /** The relation points from the mentioned term to the entry (a derived term is derived_from the lemma). */
+  reverse?: boolean
 }
 
 /** Clean a term argument: inline modifiers <t:…>, [[links]], #anchors. */
@@ -630,6 +657,35 @@ export function etymologyCandidates(e: WxEntry, fromLang: string, fromRef: strin
   })
 }
 
+/** Thesaurus sections of a lemma, as relations inside its own language. */
+const THESAURUS: { field: "synonyms" | "antonyms" | "derived" | "related"; type: RelationType; reverse?: boolean }[] = [
+  { field: "synonyms", type: "synonym_of" },
+  { field: "antonyms", type: "antonym_of" },
+  { field: "derived", type: "derived_from", reverse: true },
+  { field: "related", type: "see_also" },
+]
+const THESAURUS_TEMPLATES = new Set(THESAURUS.map((t) => t.field))
+/** Per lemma and section: Latin and Greek list hundreds of derived terms for common roots. */
+const MAX_THESAURUS_TERMS = 60
+
+export function thesaurusCandidates(e: WxEntry, fromLang: string, fromRef: string, selfWikt: string, word: string): LinkCandidate[] {
+  const out: LinkCandidate[] = []
+  for (const { field, type, reverse } of THESAURUS) {
+    const terms = [...(e[field] ?? []), ...(field === "synonyms" || field === "antonyms" ? (e.senses ?? []).flatMap((s) => s[field] ?? []) : [])]
+    const seen = new Set<string>()
+    for (const t of terms) {
+      const w = cleanTerm(t.word)
+      // "Thesaurus:" pages, the lemma itself and multi-word phrases are not entries
+      if (!w || w === word || w.startsWith("Thesaurus:") || /\s/.test(w) || seen.has(w)) continue
+      seen.add(w)
+      const c = candidate(fromLang, fromRef, selfWikt, w, [t.alt, t.roman], type, "likely", field)
+      if (c) out.push({ ...c, reverse })
+      if (seen.size >= MAX_THESAURUS_TERMS) break
+    }
+  }
+  return out
+}
+
 /** Wiktionary language code → our language id (null: not a language we hold). */
 const WIKT_TO_OURS: Record<string, string> = {
   akk: "akk",
@@ -661,7 +717,7 @@ function targetVariants(lang: string, terms: string[]): string[] {
  * Entry conversion
  * ────────────────────────────────────────────────────────────────────────── */
 
-function wiktionaryUrl(cfg: WiktionaryLanguage, word: string, reconstructed: boolean): string {
+function wiktionaryUrl(cfg: WiktionaryDump, word: string, reconstructed: boolean): string {
   const title = reconstructed ? `Reconstruction:${cfg.kaikki}/${word}` : word
   return `https://en.wiktionary.org/wiki/${title.replace(/ /g, "_")}#${cfg.kaikki.replace(/ /g, "_")}`
 }
@@ -670,7 +726,7 @@ export type Converted = { entry: SeedEntry; links: LinkCandidate[]; hieroglyphs:
 
 export function convertWiktionary(
   e: WxEntry,
-  cfg: WiktionaryLanguage,
+  cfg: WiktionaryDump,
   ref: string,
   scripts: RegExp[],
   hiero?: HieroglyphTables
@@ -756,32 +812,33 @@ export function convertWiktionary(
     ? { kind: "part", partKind: senses.some((s) => s.tags?.includes("enclitic")) && partKind === "suffix" ? "clitic" : partKind, ...base }
     : { kind: "word", pos: POS[e.pos] ?? "other", ...base }
 
-  return { entry, links: etymologyCandidates(e, lang, ref, cfg.wikt ?? lang), hieroglyphs }
+  const selfWikt = cfg.wikt ?? lang
+  return { entry, links: [...etymologyCandidates(e, lang, ref, selfWikt), ...thesaurusCandidates(e, lang, ref, selfWikt, word)], hieroglyphs }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
  * Files
  * ────────────────────────────────────────────────────────────────────────── */
 
-function kaikkiFile(cfg: WiktionaryLanguage): string {
+function kaikkiFile(cfg: WiktionaryDump): string {
   return `kaikki.org-dictionary-${cfg.kaikki.replace(/[\s'-]/g, "")}.jsonl`
 }
 
-export function kaikkiUrl(cfg: WiktionaryLanguage): string {
+export function kaikkiUrl(cfg: WiktionaryDump): string {
   return `https://kaikki.org/dictionary/${encodeURIComponent(cfg.kaikki).replace(/'/g, "%27")}/${kaikkiFile(cfg)}`
 }
 
-function dump(cfg: WiktionaryLanguage, ctx: Pick<ImporterContext, "offline" | "log">): Promise<string> {
+function dump(cfg: WiktionaryDump, ctx: Pick<ImporterContext, "offline" | "log">): Promise<string> {
   return download("wiktionary", kaikkiFile(cfg), kaikkiUrl(cfg), { offline: ctx.offline, log: ctx.log })
 }
 
-function scriptPatterns(cfg: WiktionaryLanguage): RegExp[] {
+function scriptPatterns(cfg: WiktionaryDump): RegExp[] {
   return cfg.scripts.map((s) => new RegExp(`\\p{Script=${s}}`, "u"))
 }
 
 /** Stream a dump and convert it; `onEntry` returns false to stop (limit). */
 async function readLanguage(
-  cfg: WiktionaryLanguage,
+  cfg: WiktionaryDump,
   file: string,
   hiero: HieroglyphTables | undefined,
   limit: number | undefined
@@ -807,8 +864,13 @@ async function readLanguage(
  * Links
  * ────────────────────────────────────────────────────────────────────────── */
 
-const NOTE_PREFIX = "Wiktionary etymology"
+const NOTE_PREFIX = "Wiktionary"
 const RECONSTRUCTED = new Set(["ine-pro", ...WIKTIONARY_LANGUAGES.filter((l) => l.reconstructed).map((l) => l.language.id)])
+
+/** "Wiktionary etymology: {{inh}}" or "Wiktionary synonyms" (every note starts with NOTE_PREFIX, so --prune can find them). */
+function relationNote(c: LinkCandidate): string {
+  return (THESAURUS_TEMPLATES as Set<string>).has(c.template) ? `${NOTE_PREFIX} ${c.template}` : `${NOTE_PREFIX} etymology: {{${c.template}}}`
+}
 
 /** Resolve candidates against the database and write them; returns per-type / per-target counts. */
 async function buildLinks(
@@ -839,7 +901,8 @@ async function buildLinks(
       continue
     }
     levels[hit.level - 1]!++
-    rows.push({ fromEntryId: fromId, toEntryId: hit.id, type: c.type, confidence: c.confidence, note: `${NOTE_PREFIX}: {{${c.template}}}` })
+    const [from, to] = c.reverse ? [hit.id, fromId] : [fromId, hit.id]
+    rows.push({ fromEntryId: from, toEntryId: to, type: c.type, confidence: c.confidence, note: relationNote(c) })
     const k = `${c.type} → ${lang}`
     target.set(k, (target.get(k) ?? 0) + 1)
   }
@@ -863,17 +926,210 @@ async function refsInDatabase(db: Database, lang: string): Promise<Map<string, s
   return new Map(rows.map((r) => [r.ref!, r.id]))
 }
 
+/** Every entry id of the languages (relations inside a language can start at any of them). */
+async function entryIdsOf(db: Database, langs: string[]): Promise<string[]> {
+  if (!langs.length) return []
+  const rows = await db.select({ id: entriesTable.id }).from(entriesTable).where(inArray(entriesTable.languageId, langs))
+  return rows.map((r) => r.id)
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Enrichment: languages another dictionary holds
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Languages whose entries always come from another importer; Wiktionary adds synonyms,
+ * antonyms, derived terms and etymologies to them. (Hebrew is left out: Wiktionary's
+ * "Hebrew" mixes Biblical and Modern Hebrew.)
+ */
+export const WIKTIONARY_ENRICHMENTS: WiktionaryDump[] = [
+  { kaikki: "Latin", wikt: "la", scripts: ["Latin"], language: { id: "lat", name: "Latin" } },
+  { kaikki: "Ancient Greek", wikt: "grc", scripts: ["Greek"], language: { id: "grc", name: "Ancient Greek" } },
+  { kaikki: "Sumerian", scripts: ["Cuneiform"], language: { id: "sux", name: "Sumerian" } },
+  { kaikki: "Akkadian", scripts: ["Cuneiform", "Latin"], language: { id: "akk", name: "Akkadian" } },
+  { kaikki: "Coptic", scripts: ["Coptic"], language: { id: "cop", name: "Coptic" } },
+]
+
+/** Entries of the language from any source but Wiktionary. */
+async function primaryCount(db: Database, lang: string): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)`.mapWith(Number) })
+    .from(entriesTable)
+    .where(and(eq(entriesTable.languageId, lang), sql`${entriesTable.sourceId} is distinct from ${wiktionarySource.id}`))
+  return row?.n ?? 0
+}
+
+type PrimaryRow = {
+  id: string
+  kind: string
+  pos: string | null
+  headword: string
+  native: string | null
+  translit: string | null
+  etymology: string | null
+  gloss: string
+}
+
+const STOPWORDS = new Set(["the", "and", "for", "with", "from", "that", "this", "one", "who", "which", "something", "someone", "thing", "make", "become", "be"])
+function glossWords(s: string): Set<string> {
+  return new Set((s.toLowerCase().match(/\p{L}{3,}/gu) ?? []).filter((w) => !STOPWORDS.has(w)))
+}
+
+/** The dictionary's entries of one language, indexed for matching Wiktionary lemmas to them. */
+class PrimaryIndex {
+  private levels: Map<string, string[]>[] = [new Map(), new Map(), new Map(), new Map(), new Map()]
+  readonly rows = new Map<string, PrimaryRow>()
+
+  static async load(db: Database, lang: string): Promise<PrimaryIndex> {
+    const idx = new PrimaryIndex()
+    const rows = await db
+      .select({
+        id: entriesTable.id,
+        kind: entriesTable.kind,
+        pos: entriesTable.partOfSpeech,
+        headword: entriesTable.headword,
+        native: entriesTable.nativeScript,
+        translit: entriesTable.transliteration,
+        etymology: entriesTable.etymology,
+        gloss: entriesTable.gloss,
+        searchKey: entriesTable.searchKey,
+      })
+      .from(entriesTable)
+      .where(and(eq(entriesTable.languageId, lang), sql`${entriesTable.sourceId} is distinct from ${wiktionarySource.id}`))
+    for (const r of rows) {
+      idx.rows.set(r.id, r)
+      const [headword, native, translit, spelling, key] = idx.levels as [Map<string, string[]>, Map<string, string[]>, Map<string, string[]>, Map<string, string[]>, Map<string, string[]>]
+      push(headword, r.headword.normalize("NFC"), r.id)
+      push(native, r.native?.normalize("NFC"), r.id)
+      push(translit, r.translit?.normalize("NFC"), r.id)
+      for (const f of [r.headword, r.native, r.translit]) if (f) push(spelling, spellingKey(f), r.id)
+      for (const token of r.searchKey.split(" ")) push(key, token, r.id)
+    }
+    return idx
+  }
+
+  /** The entry a Wiktionary lemma describes: exact forms first, then looser keys; homonyms are told apart by kind, part of speech and gloss. */
+  match(e: SeedEntry, lang: string): PrimaryRow | "ambiguous" | undefined {
+    const forms = targetVariants(
+      lang,
+      uniq([e.headword, e.native?.replace(/^\*/, ""), e.translit].filter((f): f is string => !!f).map((f) => f.normalize("NFC")))
+    )
+    const keyOf: ((f: string) => string | undefined)[] = [
+      (f) => f,
+      (f) => f,
+      (f) => f,
+      (f) => spellingKey(f),
+      (f) => (VOWEL_MARK_SCRIPT.test(f) ? undefined : normalizeForSearch(f) || undefined),
+    ]
+    for (const [i, level] of this.levels.entries()) {
+      const ids = uniq(forms.flatMap((f) => {
+        const k = keyOf[i]!(f)
+        return k ? (level.get(k) ?? []) : []
+      }))
+      if (!ids.length) continue
+      if (ids.length === 1) return this.rows.get(ids[0]!)
+      return this.disambiguate(ids.map((id) => this.rows.get(id)!), e) ?? "ambiguous"
+    }
+    return undefined
+  }
+
+  private disambiguate(rows: PrimaryRow[], e: SeedEntry): PrimaryRow | undefined {
+    let pool = rows.filter((r) => r.kind === e.kind)
+    if (!pool.length) pool = rows
+    if (e.kind === "word" && e.pos) {
+      const samePos = pool.filter((r) => r.pos === e.pos)
+      if (samePos.length) pool = samePos
+    }
+    if (pool.length === 1) return pool[0]
+    const words = glossWords([e.gloss, ...(e.senses ?? []).map((s) => (typeof s === "string" ? s : s.gloss))].join(" "))
+    const scored = pool.map((r) => ({ r, n: [...glossWords(r.gloss)].filter((w) => words.has(w)).length })).sort((a, b) => b.n - a.n)
+    return scored[0]!.n > 0 && scored[0]!.n > (scored[1]?.n ?? 0) ? scored[0]!.r : undefined
+  }
+}
+
+function push(map: Map<string, string[]>, k: string | null | undefined, id: string) {
+  if (!k) return
+  const ids = map.get(k)
+  if (!ids) map.set(k, [id])
+  else if (!ids.includes(id)) ids.push(id)
+}
+
+/** Match a language's Wiktionary lemmas to the dictionary entries and fill in what those lack. */
+async function enrichLanguage(cfg: WiktionaryDump, ctx: ImporterContext, converted: Converted[], records: number): Promise<LanguageRun> {
+  const { db, log } = ctx
+  const lang = cfg.language.id
+  // the language used to be Wiktionary's own: its entries would now duplicate the dictionary's
+  const removed = await db
+    .delete(entriesTable)
+    .where(and(eq(entriesTable.languageId, lang), eq(entriesTable.sourceId, wiktionarySource.id)))
+    .returning({ id: entriesTable.id })
+  if (removed.length) log(`removed ${removed.length} earlier Wiktionary entries: another dictionary now holds ${cfg.language.name}`)
+
+  const index = await PrimaryIndex.load(db, lang)
+  const idByRef = new Map<string, string>()
+  const fills = new Map<string, { native?: string; etymology?: string; row: PrimaryRow }>()
+  let ambiguous = 0
+  let unmatched = 0
+  for (const c of converted) {
+    const hit = index.match(c.entry, lang)
+    if (hit === "ambiguous") ambiguous++
+    if (!hit || hit === "ambiguous") {
+      if (!hit) unmatched++
+      continue
+    }
+    idByRef.set(c.entry.ref!, hit.id)
+    const fill = fills.get(hit.id) ?? { row: hit }
+    // a script spelling only for dictionaries that cite transliterations (Egyptian, Akkadian), never a variant of a native headword
+    const native = c.entry.native
+    const transliterated = /\p{Script=Latin}/u.test(hit.headword)
+    if (transliterated && !hit.native && !fill.native && native && !native.startsWith("*") && !/\p{Script=Latin}/u.test(native)) fill.native = native
+    if (!hit.etymology && !fill.etymology && c.entry.etymology) fill.etymology = `${c.entry.etymology} (Wiktionary)`
+    if (fill.native || fill.etymology) fills.set(hit.id, fill)
+  }
+  let natives = 0
+  let etymologies = 0
+  for (const part of chunk([...fills.values()], 500)) {
+    await db.execute(sql`
+      update ${entriesTable} as e set
+        native_script = coalesce(e.native_script, v.native),
+        etymology = coalesce(e.etymology, v.etymology),
+        search_key = case when e.native_script is null and v.native is not null then v.search_key else e.search_key end,
+        updated_at = now()
+      from (values ${sql.join(
+        part.map((f) => sql`(${f.row.id}::uuid, ${f.native ?? null}::text, ${f.etymology ?? null}::text, ${buildSearchKey([f.row.headword, f.row.translit, f.native ?? f.row.native])}::text)`),
+        sql`, `
+      )}) as v(id, native, etymology, search_key)
+      where e.id = v.id`)
+    natives += part.filter((f) => f.native).length
+    etymologies += part.filter((f) => f.etymology).length
+  }
+  log(
+    `${cfg.language.name}: ${records} records → ${converted.length} lemmas, ${idByRef.size} matched to ${new Set(idByRef.values()).size} of ${index.rows.size} entries ` +
+      `(${ambiguous} ambiguous, ${unmatched} not in the dictionary); filled ${etymologies} etymologies, ${natives} native spellings`
+  )
+  return { lang, candidates: converted.filter((c) => idByRef.has(c.entry.ref!)).flatMap((c) => c.links), idByRef }
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
  * Importers
  * ────────────────────────────────────────────────────────────────────────── */
 
 type LanguageRun = { lang: string; candidates: LinkCandidate[]; idByRef: Map<string, string> }
 
-async function importLanguage(cfg: WiktionaryLanguage, ctx: ImporterContext, hiero?: HieroglyphTables): Promise<LanguageRun> {
+const OWNED = new Set(WIKTIONARY_LANGUAGES.map((l) => l.language.id))
+
+async function importLanguage(cfg: WiktionaryDump, ctx: ImporterContext, hiero?: HieroglyphTables): Promise<LanguageRun | undefined> {
   const { db, log, limit, prune } = ctx
+  const enrich = (await primaryCount(db, cfg.language.id)) > 0
+  if (!enrich && !OWNED.has(cfg.language.id)) {
+    log(`${cfg.language.name}: no dictionary entries to enrich yet — import that language first`)
+    return undefined
+  }
   const file = await dump(cfg, ctx)
   if (cfg.hieroglyphs && !hiero) hiero = await loadHieroglyphTables({ offline: ctx.offline, log })
   const { converted, records } = await readLanguage(cfg, file, hiero, limit)
+  if (enrich) return enrichLanguage(cfg, ctx, converted, records)
+
   const entries = converted.map((c) => c.entry)
   const parts = entries.filter((e) => e.kind === "part").length
   const glyphs = converted.filter((c) => c.hieroglyphs).length
@@ -881,7 +1137,8 @@ async function importLanguage(cfg: WiktionaryLanguage, ctx: ImporterContext, hie
     `${cfg.language.name}: ${records} records → ${entries.length} lemmas (${parts} parts)` +
       (cfg.hieroglyphs ? `, ${glyphs} with hieroglyphs` : "")
   )
-  const dataset: SeedDataset = { language: cfg.language, source: wiktionarySource, entries }
+  const language = WIKTIONARY_LANGUAGES.find((l) => l.language.id === cfg.language.id)!.language
+  const dataset: SeedDataset = { language, source: wiktionarySource, entries }
   const result = await upsertDataset(db, dataset, { log, prune: prune && !limit, batchSize: 250 })
   const idByRef = new Map<string, string>()
   for (const [ref, key] of result.keyOfRef) {
@@ -894,35 +1151,44 @@ async function importLanguage(cfg: WiktionaryLanguage, ctx: ImporterContext, hie
 async function linkRuns(runs: LanguageRun[], ctx: ImporterContext) {
   const byLang = new Map(runs.map((r) => [r.lang, r.idByRef]))
   const candidates = runs.flatMap((r) => r.candidates)
-  const fromIds = runs.flatMap((r) => [...r.idByRef.values()])
-  await buildLinks(ctx.db, candidates, (lang, ref) => byLang.get(lang)?.get(ref), ctx.log, ctx.prune && !ctx.limit ? { fromIds } : undefined)
+  const prune = ctx.prune && !ctx.limit ? { fromIds: await entryIdsOf(ctx.db, runs.map((r) => r.lang)) } : undefined
+  await buildLinks(ctx.db, candidates, (lang, ref) => byLang.get(lang)?.get(ref), ctx.log, prune)
 }
 
-function languageImporter(cfg: WiktionaryLanguage): Importer {
+/** Every dump the group importer reads: Wiktionary's own languages, then the enriched ones. */
+const ALL_DUMPS: WiktionaryDump[] = [...WIKTIONARY_LANGUAGES, ...WIKTIONARY_ENRICHMENTS]
+
+function languageImporter(cfg: WiktionaryDump): Importer {
+  const owned = OWNED.has(cfg.language.id)
   return {
     id: `wikt-${cfg.language.id}`,
     language: cfg.language.id,
-    description: `Wiktionary ${cfg.language.name} lemmas (Kaikki.org) + etymology links`,
+    description: owned
+      ? `Wiktionary ${cfg.language.name} lemmas (Kaikki.org), or enrichment once a dictionary holds the language`
+      : `Wiktionary synonyms, derived terms and etymologies for the ${cfg.language.name} dictionary entries`,
     explicitOnly: true,
     async run(ctx) {
       const run = await importLanguage(cfg, ctx)
-      await linkRuns([run], ctx)
+      if (run) await linkRuns([run], ctx)
     },
   }
 }
 
-export const wiktionaryLanguageImporters: Importer[] = WIKTIONARY_LANGUAGES.map(languageImporter)
+export const wiktionaryLanguageImporters: Importer[] = ALL_DUMPS.map(languageImporter)
 
 export const wiktionaryImporter: Importer = {
   id: "wiktionary",
   language: "*",
-  description: `Wiktionary lemmas for ${WIKTIONARY_LANGUAGES.length} ancient languages (Kaikki.org) + etymology links`,
+  description: `Wiktionary lemmas for ${WIKTIONARY_LANGUAGES.length} ancient languages and enrichment of ${WIKTIONARY_ENRICHMENTS.length} more (Kaikki.org)`,
   // Last in `--all`, so its links can resolve to every other dictionary (Latin, Greek, Hebrew, Akkadian …).
   runLast: true,
   async run(ctx) {
     const hiero = await loadHieroglyphTables({ offline: ctx.offline, log: ctx.log })
     const runs: LanguageRun[] = []
-    for (const cfg of WIKTIONARY_LANGUAGES) runs.push(await importLanguage(cfg, { ...ctx, log: (m) => ctx.log(`${cfg.language.id}: ${m}`) }, hiero))
+    for (const cfg of ALL_DUMPS) {
+      const run = await importLanguage(cfg, { ...ctx, log: (m) => ctx.log(`${cfg.language.id}: ${m}`) }, hiero)
+      if (run) runs.push(run)
+    }
     await linkRuns(runs, ctx)
   },
 }
@@ -930,29 +1196,34 @@ export const wiktionaryImporter: Importer = {
 export const wiktionaryLinksImporter: Importer = {
   id: "wiktionary-links",
   language: "*",
-  description: "Rebuild Wiktionary etymology relations from the cached dumps (run after other languages are imported)",
+  description: "Rebuild Wiktionary etymology and thesaurus relations from the cached dumps (run after other languages are imported)",
   // `wiktionary` already builds the links at its end; this is for re-linking after a later import.
   explicitOnly: true,
   async run(ctx) {
     const { db, log, limit } = ctx
-    const refs = new Map<string, Map<string, string>>()
-    const candidates: LinkCandidate[] = []
-    for (const cfg of WIKTIONARY_LANGUAGES) {
-      const idByRef = await refsInDatabase(db, cfg.language.id)
-      if (!idByRef.size) {
-        log(`${cfg.language.id}: no Wiktionary entries in the database — run wikt-${cfg.language.id} first`)
+    const runs: LanguageRun[] = []
+    for (const cfg of ALL_DUMPS) {
+      const sub = { ...ctx, log: (m: string) => log(`${cfg.language.id}: ${m}`) }
+      if ((await primaryCount(db, cfg.language.id)) > 0) {
+        // enriched language: match the lemmas again (cheap) — this also fills new entries' gaps
+        const run = await importLanguage(cfg, sub)
+        if (run) runs.push(run)
         continue
       }
-      refs.set(cfg.language.id, idByRef)
+      if (!OWNED.has(cfg.language.id)) continue
+      const idByRef = await refsInDatabase(db, cfg.language.id)
+      if (!idByRef.size) {
+        sub.log(`no Wiktionary entries in the database — run wikt-${cfg.language.id} first`)
+        continue
+      }
       const file = await dump(cfg, ctx)
       // hieroglyphs are irrelevant for links; conversion keeps the ref numbering identical
       const { converted } = await readLanguage(cfg, file, undefined, limit)
-      const links = converted.flatMap((c) => c.links)
-      log(`${cfg.language.id}: ${links.length} etymology mentions from ${converted.length} lemmas`)
-      candidates.push(...links)
+      const candidates = converted.flatMap((c) => c.links)
+      sub.log(`${candidates.length} etymology and thesaurus mentions from ${converted.length} lemmas`)
+      runs.push({ lang: cfg.language.id, candidates, idByRef })
     }
-    const fromIds = [...refs.values()].flatMap((m) => [...m.values()])
-    await buildLinks(db, candidates, (lang, ref) => refs.get(lang)?.get(ref), log, ctx.prune && !limit ? { fromIds } : undefined)
+    await linkRuns(runs, ctx)
   },
 }
 

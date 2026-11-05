@@ -2,15 +2,14 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { countSigns, getScript, listSignCategories, listSigns } from "@workspace/db"
-import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
 import { cn } from "@workspace/ui/lib/utils"
 
 import { DbProblem } from "@/components/db-problem"
+import { HeroGlyph, PageHero } from "@/components/page-hero"
 import { SignTile } from "@/components/sign-tile"
 import { first, withDb } from "@/lib/data"
-import { COMPOSITE_SCRIPTS, scriptHref } from "@/lib/scripts"
+import { COMPOSITE_SCRIPTS, scriptFontClass, scriptHref } from "@/lib/scripts"
 
 export const dynamic = "force-dynamic"
 
@@ -58,6 +57,13 @@ export default async function ScriptPage({ params, searchParams }: Props) {
   if (!result.data) notFound()
   const { script, list, counts, categories } = result.data
   const pageCount = Math.max(1, Math.ceil(list.total / PAGE_SIZE))
+  // a letter for the hero, not a combining mark floating on its own (Devanagari lists its signs first)
+  const sample = list.rows.find((r) => r.unicode && !/^\p{M}/u.test(r.unicode))?.unicode
+  const chip = (active: boolean) =>
+    cn(
+      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+      active ? "border-transparent bg-linear-to-br from-violet to-ember text-white" : "glass text-muted-foreground hover:border-violet/50 hover:text-foreground"
+    )
   const href = (over: { page?: number; cat?: string | null; all?: boolean } = {}) => {
     const u = new URLSearchParams()
     if (q) u.set("q", q)
@@ -71,70 +77,83 @@ export default async function ScriptPage({ params, searchParams }: Props) {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          <Link href="/scripts" className="hover:text-foreground">Scripts</Link> / {script.name}
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">{script.name}</h1>
-        <div className="flex flex-wrap gap-1">
-          {script.kind ? <Badge variant="secondary">{script.kind}</Badge> : null}
-          {script.period ? <Badge variant="outline">{script.period}</Badge> : null}
-          {script.iso15924 ? <Badge variant="outline" className="font-mono">{script.iso15924}</Badge> : null}
-          {script.unicodeRange ? <Badge variant="outline" className="font-mono">{script.unicodeRange}</Badge> : null}
-          {script.direction === "rtl" ? <Badge variant="outline">right to left</Badge> : null}
-        </div>
-        {script.description ? <p className="max-w-3xl text-muted-foreground">{script.description}</p> : null}
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          {counts.encoded.toLocaleString()} signs with a glyph
-          {counts.total !== counts.encoded ? `, ${counts.total.toLocaleString()} including unencoded signs and variant forms` : ""}
-          {counts.readings ? `, ${counts.readings.toLocaleString()} readings` : ""}.
-          {script.region ? ` ${script.region}.` : ""}
-        </p>
-        <form action={scriptHref(scriptId)} method="get" className="flex max-w-xl items-center gap-2" role="search">
+      <PageHero
+        eyebrow={
+          <>
+            <Link href="/scripts" className="hover:text-(--hero-ink)">Scripts</Link>
+            <span className="opacity-60">/</span>
+            <span>{script.kind ?? "script"}</span>
+          </>
+        }
+        title={script.name}
+        lede={script.description}
+        art={
+          sample ? (
+            <HeroGlyph className={cn(scriptFontClass(scriptId), "text-7xl text-amber sm:text-8xl")}>
+              <span dir={script.direction}>{sample}</span>
+            </HeroGlyph>
+          ) : undefined
+        }
+        stats={[
+          { label: "Signs", value: counts.encoded.toLocaleString(), featured: true, note: counts.total !== counts.encoded ? `${counts.total.toLocaleString()} with unencoded and forms` : "with a glyph" },
+          ...(counts.readings ? [{ label: "Readings", value: counts.readings.toLocaleString() }] : []),
+          ...(script.period ? [{ label: "Period", value: script.period }] : []),
+          ...(script.region ? [{ label: "Region", value: script.region }] : []),
+          ...(script.unicodeRange ? [{ label: "Unicode", value: <span className="font-mono text-sm">{script.unicodeRange}</span>, note: [script.iso15924, script.direction === "rtl" ? "right to left" : null].filter(Boolean).join(" · ") || undefined }] : []),
+        ]}
+      >
+        <form
+          action={scriptHref(scriptId)}
+          method="get"
+          role="search"
+          className="glass flex max-w-xl items-center gap-2 rounded-full p-1.5 pl-5 focus-within:border-violet/60"
+        >
           {all ? <input type="hidden" name="all" value="1" /> : null}
           {category ? <input type="hidden" name="cat" value={category} /> : null}
-          <Input type="search" name="q" defaultValue={q} placeholder={PLACEHOLDER[scriptId] ?? "reading, name or glyph …"} aria-label={`Search ${script.name} signs`} className="h-10" />
-          <Button type="submit">Search</Button>
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder={PLACEHOLDER[scriptId] ?? "reading, name or glyph …"}
+            aria-label={`Search ${script.name} signs`}
+            className="h-10 min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          <button type="submit" className="btn-glow h-10 shrink-0 px-6 text-sm">
+            Search
+          </button>
         </form>
+      </PageHero>
+
+      <div className="space-y-3">
         {categories.length > 1 ? (
           <nav aria-label="Categories" className="flex flex-wrap gap-1.5">
-            <Link
-              href={href({ cat: null })}
-              className={cn("rounded-full border px-2.5 py-0.5 text-xs hover:bg-muted", !category && "bg-primary text-primary-foreground hover:bg-primary/90")}
-            >
+            <Link href={href({ cat: null })} className={chip(!category)}>
               All
             </Link>
             {categories.map((c) => (
-              <Link
-                key={c.category}
-                href={href({ cat: c.category })}
-                className={cn(
-                  "rounded-full border px-2.5 py-0.5 text-xs hover:bg-muted",
-                  category === c.category && "bg-primary text-primary-foreground hover:bg-primary/90"
-                )}
-              >
-                {c.category} <span className="opacity-60">{c.n}</span>
+              <Link key={c.category} href={href({ cat: c.category })} className={chip(category === c.category)}>
+                {c.category} <span className="ml-1 opacity-70">{c.n}</span>
               </Link>
             ))}
           </nav>
         ) : null}
-        <p className="text-sm text-muted-foreground">
+        <p className="font-mono text-xs text-muted-foreground">
           {list.total.toLocaleString()} sign{list.total === 1 ? "" : "s"}
           {q ? ` matching “${q}”` : ""}
           {category ? ` in ${category}` : ""}
           {composite ? (
             <>
               {" "}·{" "}
-              <Link href={href({ all: !all })} className="underline-offset-4 hover:underline">
+              <Link href={href({ all: !all })} className="underline-offset-4 hover:text-foreground hover:underline">
                 {all ? "show only encoded base signs" : "include unencoded signs and variant forms"}
               </Link>
             </>
           ) : null}
         </p>
-      </header>
+      </div>
 
       {list.rows.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">No signs match.</p>
+        <p className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">No signs match.</p>
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8" dir="ltr">
           {list.rows.map((s) => (

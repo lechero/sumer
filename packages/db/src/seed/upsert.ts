@@ -10,7 +10,7 @@
  *      without one, the lowest free index for that headword is taken.
  * Senses and components of every touched entry are rewritten.
  */
-import { and, eq, inArray, notInArray, sql } from "drizzle-orm"
+import { and, eq, inArray, sql } from "drizzle-orm"
 
 import type { Database } from "../client"
 import { buildSearchKey } from "../normalize"
@@ -335,12 +335,14 @@ export async function upsertDataset(db: Database, ds: SeedDataset, opts: UpsertO
   // Optionally remove stale rows of this source.
   let pruned = 0
   if (opts.prune && !fill) {
-    const keep = ids
-    const stale = await db
+    // stale ids are found here, not with NOT IN (…): a 200k-id list overflows the query builder
+    const keep = new Set(ids)
+    const own = await db
       .select({ id: entries.id })
       .from(entries)
-      .where(and(eq(entries.languageId, lang), eq(entries.sourceId, ds.source.id), keep.length ? notInArray(entries.id, keep) : sql`true`))
-    for (const part of chunk(stale.map((r) => r.id), 500)) {
+      .where(and(eq(entries.languageId, lang), eq(entries.sourceId, ds.source.id)))
+    const stale = own.map((r) => r.id).filter((id) => !keep.has(id))
+    for (const part of chunk(stale, 500)) {
       await db.delete(entries).where(inArray(entries.id, part))
       pruned += part.length
     }

@@ -9,27 +9,37 @@ import { eblImporter } from "./sources/ebl"
 import { epsd2Importer } from "./sources/epsd2"
 import { copticImporter } from "./sources/coptic"
 import { lewisShortImporter } from "./sources/lewis-short"
+import { monierWilliamsImporter } from "./sources/monier-williams"
+import { dpdImporter } from "./sources/dpd"
+import { bosworthTollerImporter } from "./sources/bosworth-toller"
+import { zoegaImporter } from "./sources/zoega"
 import { lsjImporter } from "./sources/lsj"
 import { oshbImporter } from "./sources/oshb"
 import { alphabetsImporter } from "./sources/alphabets"
 import { oslImporter } from "./sources/osl"
 import { pcslImporter } from "./sources/pcsl"
+import { tlaEgyptianImporter } from "./sources/tla-egyptian"
 import { unikemetImporter } from "./sources/unikemet"
 import { wiktionaryImporters } from "./sources/wiktionary"
 
-// `--all` runs these in order, then the `runLast` ones (wiktionary, then coptic) in order.
+// `--all` runs these in order, then the `runLast` ones (wiktionary: it enriches the dictionaries above and links them).
 const importers: Importer[] = [
   oslImporter,
   pcslImporter,
   unikemetImporter,
   alphabetsImporter,
+  eblImporter, // before epsd2: its Akkadian equivalents link to the eBL entries
   epsd2Importer,
-  eblImporter,
   oshbImporter,
   lsjImporter,
   lewisShortImporter,
-  ...wiktionaryImporters,
+  monierWilliamsImporter,
+  dpdImporter,
+  bosworthTollerImporter,
+  zoegaImporter,
+  tlaEgyptianImporter,
   copticImporter,
+  ...wiktionaryImporters,
 ]
 
 function usage(): never {

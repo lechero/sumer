@@ -8,8 +8,10 @@
  *
  * Headword: the Sahidic form when the entry has one, else its lemma form; the
  * other dialect forms go into `notes`. Greek loanwords are linked (loan_from)
- * to the LSJ entry when it resolves unambiguously; compounds are linked to
- * their components; cross-references become see_also / synonym / antonym.
+ * to the LSJ entry when it resolves unambiguously; Egyptian ancestors
+ * (derived_from) to the TLA entry with the cited lemma id (`tla-egy`, run it
+ * first); compounds are linked to their components; cross-references become
+ * see_also / synonym / antonym.
  */
 import { and, eq, inArray, lt } from "drizzle-orm"
 import {
@@ -34,6 +36,7 @@ import { fixCopticLookalikes, transliterateCoptic } from "../lib/coptic"
 import { truncate, uniq } from "../lib/text"
 import { child, children, clean, descendants, forEachElement, text, type XmlNode } from "../lib/xml"
 import type { Importer } from "../registry"
+import { tlaEgyptianSource } from "./tla-egyptian"
 
 const RAW = "https://raw.githubusercontent.com/KELLIA/dictionary/master/"
 const XML_FILE = "Comprehensive_Coptic_Lexicon-v1.2-2020.xml"
@@ -554,8 +557,6 @@ export const copticImporter: Importer = {
   id: "coptic",
   language: "cop",
   description: "Comprehensive Coptic Lexicon (BBAW + DDGLC via KELLIA, ~11k entries) with Greek loanword links",
-  // After `wiktionary` in `--all`: its Egyptian ancestors link to the Wiktionary Egyptian entries.
-  runLast: true,
   async run({ db, log, limit, offline, prune }) {
     const startedAt = new Date()
     const [xmlFile, etymFile] = await Promise.all([
@@ -639,7 +640,8 @@ export const copticImporter: Importer = {
     )
     if (unresolved.length) log(`  e.g. not in LSJ: ${unresolved.slice(0, 12).join(", ")}`)
 
-    // Egyptian ancestors → derived_from the egy entry with that exact transliteration, when exactly one exists
+    // Egyptian ancestors → derived_from the TLA entry with the cited lemma id. Lemmas missing from the
+    // 2018 TLA extract fall back to an egy entry with that exact transliteration, when exactly one exists
     // and its meaning shares a word with the TLA meaning (transliterations alone collide across homonyms:
     // ϣⲟϣ "antelope" < šsꜣ is not šsꜣ "to be aware").
     const egyRows = await db
@@ -649,16 +651,22 @@ export const copticImporter: Importer = {
         translit: entriesTable.transliteration,
         gloss: entriesTable.gloss,
         definition: entriesTable.definition,
+        sourceId: entriesTable.sourceId,
+        sourceRef: entriesTable.sourceRef,
       })
       .from(entriesTable)
-      .where(and(eq(entriesTable.languageId, "egy"), eq(entriesTable.kind, "word")))
-    let egyLinks = 0
+      .where(eq(entriesTable.languageId, "egy"))
+    let egyById = 0
+    let egyByForm = 0
     let egyHomographs = 0
+    let egyMissing = 0
     if (egyRows.length) {
       type EgyRow = { headword: string; homonym: number; words: Set<string> }
+      const byTla = new Map<string, EgyRow>()
       const byTranslit = new Map<string, EgyRow[]>()
       for (const row of egyRows) {
         const item = { headword: row.headword, homonym: row.homonym, words: meaningWords(`${row.gloss} ${row.definition ?? ""}`) }
+        if (row.sourceId === tlaEgyptianSource.id && row.sourceRef) byTla.set(row.sourceRef, item)
         for (const k of uniq([row.headword, row.translit ?? ""].map((x) => x.normalize("NFC")).filter(Boolean))) {
           byTranslit.set(k, [...(byTranslit.get(k) ?? []), item])
         }
@@ -666,18 +674,33 @@ export const copticImporter: Importer = {
       for (const r of kept) {
         const etym = egyptian.get(r.id)
         const from = refOf(r.id)
-        const cands = etym?.egyLemma ? (byTranslit.get(etym.egyLemma) ?? []) : []
-        if (!from || cands.length !== 1) continue
-        const tla = meaningWords(etym?.english ?? "")
+        if (!from || !etym?.egyLemma) continue
+        const byId = etym.egyNum ? byTla.get(etym.egyNum) : undefined
+        if (byId) {
+          rels.push({ from, to: { lang: "egy", headword: byId.headword, homonym: byId.homonym }, type: "derived_from", confidence: "certain", note: NOTE_EGY })
+          egyById++
+          continue
+        }
+        const cands = byTranslit.get(etym.egyLemma) ?? []
+        if (cands.length !== 1) {
+          egyMissing++
+          continue
+        }
+        const tla = meaningWords(etym.english ?? "")
         if (![...tla].some((w) => cands[0]!.words.has(w))) {
           egyHomographs++
           continue
         }
         rels.push({ from, to: { lang: "egy", headword: cands[0]!.headword, homonym: cands[0]!.homonym }, type: "derived_from", confidence: "likely", note: NOTE_EGY })
-        egyLinks++
+        egyByForm++
       }
     }
-    log(`Egyptian ancestors linked: ${egyLinks}${egyRows.length ? `, ${egyHomographs} same transliteration but different meaning (skipped)` : " (no egy entries yet)"}`)
+    log(
+      egyRows.length
+        ? `Egyptian ancestors linked: ${egyById + egyByForm} (${egyById} by TLA lemma id, ${egyByForm} by transliteration and meaning), ` +
+            `${egyHomographs} same transliteration but different meaning, ${egyMissing} not found (skipped)`
+        : "Egyptian ancestors: no egy entries yet (run tla-egy first)"
+    )
 
     for (const x of relations) {
       const from = refOf(x.from)

@@ -29,6 +29,13 @@
       "when": 1793757917408,
       "tag": "0003_scripts",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793761565338,
+      "tag": "0004_gloss_terms",
+      "breakpoints": true
     }
   ]
 }

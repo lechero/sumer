@@ -15,6 +15,10 @@ const SCRIPT_LANG: Record<string, string> = {
   Linb: "gmy",
   Goth: "got",
   Phnx: "phn",
+  Deva: "sa",
+  Armn: "xcl",
+  Cyrs: "cu",
+  Ethi: "gez",
 }
 
 type Props = {

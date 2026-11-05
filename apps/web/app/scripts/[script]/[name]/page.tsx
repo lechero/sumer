@@ -87,10 +87,10 @@ export default async function SignPage({ params }: Props) {
 
   return (
     <article className="space-y-10">
-      <header className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          <Link href="/scripts" className="hover:text-foreground">Scripts</Link> /{" "}
-          <Link href={scriptHref(script)} className="hover:text-foreground">{sign.script.name}</Link> / {sign.name}
+      <header className="hero-sky space-y-5 rounded-3xl border px-5 py-8 sm:px-10 sm:py-10">
+        <p className="eyebrow text-(--hero-dim)">
+          <Link href="/scripts" className="hover:text-(--hero-ink)">Scripts</Link> /{" "}
+          <Link href={scriptHref(script)} className="hover:text-(--hero-ink)">{sign.script.name}</Link> / {sign.name}
           {sign.parent ? (
             <>
               {" "}· variant of{" "}
@@ -99,12 +99,12 @@ export default async function SignPage({ params }: Props) {
           ) : null}
         </p>
         <div className="flex flex-wrap items-end gap-8">
-          <div className="max-w-full text-[5rem] leading-none break-all sm:text-[9rem]" dir={sign.script.direction}>
+          <div className="glyph-glow max-w-full text-[5rem] leading-none break-all text-amber [animation:bob_4.5s_ease-in-out_infinite] sm:text-[9rem]" dir={sign.script.direction}>
             <SignFace unicode={sign.unicode} components={sign.components} script={script} />
           </div>
           <div className="min-w-0 max-w-full space-y-2">
-            <h1 className="font-mono text-2xl font-semibold tracking-tight break-all sm:text-3xl">{sign.name}</h1>
-            {sign.unicodeName ? <p className="text-muted-foreground">{sign.unicodeName}</p> : null}
+            <h1 className="font-mono text-3xl font-bold tracking-tight break-all text-(--hero-ink) sm:text-5xl">{sign.name}</h1>
+            {sign.unicodeName ? <p className="font-mono text-sm text-(--hero-dim)">{sign.unicodeName}</p> : null}
             <div className="flex flex-wrap gap-1">
               {sign.category ? (
                 <Link href={`${scriptHref(script)}?cat=${encodeURIComponent(sign.category)}`}>
@@ -125,16 +125,16 @@ export default async function SignPage({ params }: Props) {
             {sign.aliases?.length ? <p className="text-sm text-muted-foreground">Also called {sign.aliases.join(", ")}</p> : null}
           </div>
         </div>
-        {sign.description ? <p className="max-w-3xl text-muted-foreground">{sign.description}</p> : null}
+        {sign.description ? <p className="max-w-3xl text-lg text-(--hero-dim)">{sign.description}</p> : null}
         <nav className="flex flex-wrap justify-between gap-2 text-sm" aria-label="Neighbouring signs">
           {sign.prev ? (
-            <Link href={signHref(script, sign.prev.name)} className="inline-flex items-center gap-2 rounded-md border px-2 py-1 hover:bg-muted">
+            <Link href={signHref(script, sign.prev.name)} className="glass inline-flex items-center gap-2 rounded-full px-3 py-1 hover:border-violet/50">
               ← <span className="text-xl leading-none"><SignFace unicode={sign.prev.unicode} script={script} /></span>
               <span className="font-mono text-xs">{sign.prev.name}</span>
             </Link>
           ) : <span />}
           {sign.next ? (
-            <Link href={signHref(script, sign.next.name)} className="inline-flex items-center gap-2 rounded-md border px-2 py-1 hover:bg-muted">
+            <Link href={signHref(script, sign.next.name)} className="glass inline-flex items-center gap-2 rounded-full px-3 py-1 hover:border-violet/50">
               <span className="font-mono text-xs">{sign.next.name}</span>
               <span className="text-xl leading-none"><SignFace unicode={sign.next.unicode} script={script} /></span> →
             </Link>
@@ -143,9 +143,9 @@ export default async function SignPage({ params }: Props) {
       </header>
 
       <div className="grid gap-10 lg:grid-cols-[2fr_1fr]">
-        <div className="space-y-10">
+        <div className="min-w-0 space-y-10">
           <section className="space-y-3">
-            <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">{readingsTitle}</h2>
+            <h2 className="eyebrow text-foreground">{readingsTitle}</h2>
             {main.length === 0 && other.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {script === "proto-cuneiform" ? "Proto-cuneiform signs are cited by name; their readings are mostly unknown." : "No readings recorded."}
@@ -158,14 +158,14 @@ export default async function SignPage({ params }: Props) {
                     <li key={r.id}>
                       <Link
                         href={`/search?q=${encodeURIComponent(r.value)}`}
-                        className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-sm hover:bg-muted"
+                        className="glass inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm hover:border-violet/50 hover:text-violet"
                       >
                         {r.value}
                         {r.isUncertain ? <span className="text-muted-foreground">?</span> : null}
                       </Link>
                     </li>
                   ) : (
-                    <li key={r.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-sm">
+                    <li key={r.id} className="glass inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm">
                       {r.value}
                     </li>
                   )
@@ -177,7 +177,7 @@ export default async function SignPage({ params }: Props) {
                 <h3 className="text-xs text-muted-foreground">Values in other languages</h3>
                 <ul className="flex flex-wrap gap-2">
                   {other.map((r) => (
-                    <li key={r.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-sm">
+                    <li key={r.id} className="glass inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm">
                       <span className="text-xs text-muted-foreground" title={LANGUAGE_NAMES[r.language ?? ""]}>{r.language}</span> {r.value}
                     </li>
                   ))}
@@ -191,7 +191,7 @@ export default async function SignPage({ params }: Props) {
 
           {sign.components?.some((c) => c.kind === "sign") ? (
             <section className="space-y-3">
-              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Components</h2>
+              <h2 className="eyebrow text-foreground">Components</h2>
               <ol className="flex flex-wrap items-center gap-2">
                 {sign.components.map((c, i) => {
                   if (c.kind === "op") return <li key={i} className="font-mono text-sm text-muted-foreground">{c.text}</li>
@@ -204,7 +204,7 @@ export default async function SignPage({ params }: Props) {
                       {target ? (
                         <Link
                           href={signHref(script, target.name)}
-                          className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-sm hover:bg-muted"
+                          className="glass inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm hover:border-violet/50"
                           title={approximate ? `${c.name} has no glyph of its own; drawn as ${drawn.name}` : undefined}
                         >
                           <span className="text-2xl leading-none"><SignFace unicode={drawn?.unicode ?? target.unicode} script={script} /></span>
@@ -230,11 +230,11 @@ export default async function SignPage({ params }: Props) {
 
           {sign.forms.length ? (
             <section className="space-y-3">
-              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Variant forms</h2>
+              <h2 className="eyebrow text-foreground">Variant forms</h2>
               <ul className="flex flex-wrap gap-2">
                 {sign.forms.map((f) => (
                   <li key={f.id}>
-                    <Link href={signHref(script, f.name)} className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-sm hover:bg-muted">
+                    <Link href={signHref(script, f.name)} className="glass inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm hover:border-violet/50">
                       <span className="text-2xl leading-none"><SignFace unicode={f.unicode} script={script} /></span>
                       <span className="font-mono text-xs">{f.name}</span>
                     </Link>
@@ -246,7 +246,7 @@ export default async function SignPage({ params }: Props) {
 
           {words ? (
             <section className="space-y-3">
-              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              <h2 className="eyebrow text-foreground">
                 Words written with this sign{usedIn.length ? ` (${usedIn.length}${usedIn.length >= 80 ? "+" : ""})` : ""}
               </h2>
               <EntryTable rows={usedIn} breakdowns={breakdowns} emptyMessage="No dictionary entry uses this glyph yet." />
@@ -255,16 +255,16 @@ export default async function SignPage({ params }: Props) {
 
           {sign.notes ? (
             <section className="space-y-3">
-              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Notes</h2>
+              <h2 className="eyebrow text-foreground">Notes</h2>
               <p className="whitespace-pre-line text-sm text-muted-foreground">{sign.notes}</p>
             </section>
           ) : null}
         </div>
 
-        <aside className="space-y-6">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           {sign.listNumbers ? (
-            <section className="space-y-2">
-              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Sign lists</h2>
+            <section className="glass space-y-2 rounded-2xl p-4">
+              <h2 className="eyebrow text-foreground">Sign lists</h2>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                 {Object.entries(sign.listNumbers).map(([list, nums]) => (
                   <div key={list} className="contents">
@@ -276,8 +276,8 @@ export default async function SignPage({ params }: Props) {
             </section>
           ) : null}
           {sign.links?.length ? (
-            <section className="space-y-2">
-              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Elsewhere</h2>
+            <section className="glass space-y-2 rounded-2xl p-4">
+              <h2 className="eyebrow text-foreground">Elsewhere</h2>
               <ul className="space-y-1 text-sm">
                 {sign.links.map((l) => (
                   <li key={l.url}>
@@ -287,8 +287,8 @@ export default async function SignPage({ params }: Props) {
               </ul>
             </section>
           ) : null}
-          <section className="space-y-2">
-            <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Source</h2>
+          <section className="glass top-bar space-y-2 rounded-2xl p-4" style={{ "--bar": "linear-gradient(90deg, var(--mint), var(--sky))" } as React.CSSProperties}>
+            <h2 className="eyebrow text-foreground">Source</h2>
             <p className="text-sm">
               {sign.source?.url ? <a href={sign.source.url} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">{sign.source.title}</a> : sign.source?.title}
             </p>

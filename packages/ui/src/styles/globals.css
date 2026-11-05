@@ -53,82 +53,296 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    /* Parchment: the light theme (and print) */
+    --background: #f6f2ea;
+    --foreground: #1b1930;
+    --card: rgb(255 255 255 / 0.72);
+    --card-foreground: #1b1930;
+    --popover: #fffdf8;
+    --popover-foreground: #1b1930;
+    --primary: #5b3fe6;
+    --primary-foreground: #ffffff;
+    --secondary: rgb(27 25 48 / 0.06);
+    --secondary-foreground: #1b1930;
+    --muted: rgb(27 25 48 / 0.05);
+    --muted-foreground: #5d5874;
+    --accent: rgb(91 63 230 / 0.1);
+    --accent-foreground: #1b1930;
+    --destructive: #c8402e;
+    --border: rgb(27 25 48 / 0.11);
+    --input: rgb(27 25 48 / 0.16);
+    --ring: #d9821c;
+    --chart-1: #5b3fe6;
+    --chart-2: #d9821c;
+    --chart-3: #0f9f7c;
+    --chart-4: #d4387f;
+    --chart-5: #e0583a;
+    --radius: 0.75rem;
+    --sidebar: #fffdf8;
+    --sidebar-foreground: #1b1930;
+    --sidebar-primary: #5b3fe6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: rgb(91 63 230 / 0.1);
+    --sidebar-accent-foreground: #1b1930;
+    --sidebar-border: rgb(27 25 48 / 0.11);
+    --sidebar-ring: #d9821c;
+
+    /* the accent family (deeper in daylight, for contrast) */
+    --violet: #5b3fe6;
+    --amber: #c9760f;
+    --ember: #dc5233;
+    --mint: #0f9f7c;
+    --rose: #d4387f;
+    --sky: #2b7fd8;
+    --ink-2: #47435c;
+    --panel-solid: #fffdf8;
+    --grid-line: rgb(27 25 48 / 0.045);
+    --glow-violet: rgb(91 63 230 / 0.1);
+    --glow-amber: rgb(217 130 28 / 0.1);
+    --glow-mint: rgb(15 159 124 / 0.05);
+    --hero-from: #fbf7ef;
+    --hero-mid: #efe8ff;
+    --hero-to: #e9f5f1;
+    --hero-ink: #1b1930;
+    --hero-dim: rgb(27 25 48 / 0.62);
+    --shadow-glow: 0 22px 48px -24px rgb(91 63 230 / 0.35);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    /* Night: violet and amber sky over dark glass */
+    --background: #0b0e1b;
+    --foreground: #eceefa;
+    --card: rgb(24 28 48 / 0.74);
+    --card-foreground: #eceefa;
+    --popover: #171b2e;
+    --popover-foreground: #eceefa;
+    --primary: #b4a7ff;
+    --primary-foreground: #150f33;
+    --secondary: rgb(255 255 255 / 0.08);
+    --secondary-foreground: #eceefa;
+    --muted: rgb(255 255 255 / 0.06);
+    --muted-foreground: #9aa0bf;
+    --accent: rgb(124 92 255 / 0.17);
+    --accent-foreground: #eceefa;
+    --destructive: #ff8f82;
+    --border: rgb(255 255 255 / 0.09);
+    --input: rgb(255 255 255 / 0.16);
+    --ring: #ffb454;
+    --chart-1: #b4a7ff;
+    --chart-2: #ffb454;
+    --chart-3: #3ee0b5;
+    --chart-4: #ff6fb5;
+    --chart-5: #ff7a59;
+    --sidebar: #171b2e;
+    --sidebar-foreground: #eceefa;
+    --sidebar-primary: #b4a7ff;
+    --sidebar-primary-foreground: #150f33;
+    --sidebar-accent: rgb(124 92 255 / 0.17);
+    --sidebar-accent-foreground: #eceefa;
+    --sidebar-border: rgb(255 255 255 / 0.09);
+    --sidebar-ring: #ffb454;
+
+    --violet: #9d86ff;
+    --amber: #ffb454;
+    --ember: #ff7a59;
+    --mint: #3ee0b5;
+    --rose: #ff6fb5;
+    --sky: #6aa8ff;
+    --ink-2: #b9bed6;
+    --panel-solid: #171b2e;
+    --grid-line: rgb(255 255 255 / 0.024);
+    --glow-violet: rgb(124 92 255 / 0.14);
+    --glow-amber: rgb(255 180 84 / 0.08);
+    --glow-mint: rgb(62 224 181 / 0.05);
+    --hero-from: #0a0d1a;
+    --hero-mid: #151238;
+    --hero-to: #0c1828;
+    --hero-ink: #ffffff;
+    --hero-dim: rgb(238 240 251 / 0.66);
+    --shadow-glow: 0 22px 48px -20px rgb(124 92 255 / 0.55);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
+  }
+  html {
+    scroll-padding-top: 5rem;
+  }
   body {
     @apply bg-background text-foreground;
+    /* the sky: violet top right, amber bottom left, a little mint in the middle */
+    background-image:
+      radial-gradient(1100px 640px at 100% 0%, var(--glow-violet), transparent 60%),
+      radial-gradient(900px 560px at 0% 100%, var(--glow-amber), transparent 60%),
+      radial-gradient(760px 520px at 45% 55%, var(--glow-mint), transparent 65%);
+    background-attachment: fixed;
+  }
+  /* datasheet grid behind everything */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--violet) 45%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+}
+
+/* ── accents as Tailwind colours: text-violet, bg-amber/20, border-mint … ── */
+@theme inline {
+    --color-violet: var(--violet);
+    --color-amber: var(--amber);
+    --color-ember: var(--ember);
+    --color-mint: var(--mint);
+    --color-rose: var(--rose);
+    --color-sky: var(--sky);
+    --color-ink-2: var(--ink-2);
+    --color-panel: var(--panel-solid);
+}
+
+/* ── glass, labels and glow (after the night report style) ── */
+
+/** Frosted panel: cards, tables, asides. */
+@utility glass {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 18px 40px -30px rgb(0 0 0 / 0.8);
+    backdrop-filter: blur(10px) saturate(130%);
+    -webkit-backdrop-filter: blur(10px) saturate(130%);
+}
+
+/** Mono uppercase kicker above a heading. */
+@utility eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+}
+
+/** Headline text in a slow gradient shimmer. */
+@utility text-shimmer {
+    background-image: linear-gradient(90deg, var(--amber), var(--ember), var(--rose), var(--violet), var(--mint), var(--amber));
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 14s linear infinite;
+}
+
+/** Native script lit from behind. */
+@utility glyph-glow {
+    text-shadow: 0 0 18px color-mix(in srgb, var(--amber) 55%, transparent), 0 0 2px color-mix(in srgb, var(--amber) 40%, transparent);
+}
+
+/** Numbered section badge. */
+@utility sec-num {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #fff;
+    padding: 0.2rem 0.45rem;
+    border-radius: 0.35rem;
+    background-image: linear-gradient(135deg, var(--violet), var(--ember));
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--violet) 35%, transparent);
+}
+
+/** Pill call to action, amber to ember. */
+@utility btn-glow {
+    border-radius: 999px;
+    font-weight: 650;
+    color: #1d1206;
+    background-image: linear-gradient(135deg, #ffb454, #ff7a59);
+    box-shadow: 0 8px 28px rgb(255 130 80 / 0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 34px rgb(255 130 80 / 0.5);
     }
 }
+
+/** A card that lifts and glows on hover. */
+@utility lift {
+    transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+    &:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--violet) 45%, var(--border));
+        box-shadow: var(--shadow-glow);
+    }
+}
+
+/** The page hero: night sky with a fading grid. */
+@utility hero-sky {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    color: var(--hero-ink);
+    background-image:
+      radial-gradient(900px 420px at 88% -12%, color-mix(in srgb, var(--violet) 55%, transparent), transparent 62%),
+      radial-gradient(760px 360px at -6% 112%, color-mix(in srgb, var(--amber) 32%, transparent), transparent 60%),
+      radial-gradient(520px 260px at 60% 120%, color-mix(in srgb, var(--mint) 16%, transparent), transparent 60%),
+      linear-gradient(160deg, var(--hero-from) 0%, var(--hero-mid) 55%, var(--hero-to) 100%);
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image: linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+      background-size: 24px 24px;
+      mask-image: linear-gradient(to bottom, #000 10%, transparent 95%);
+    }
+}
+
+/** Gradient bar along the top of a card; set --bar to change it. */
+@utility top-bar {
+    position: relative;
+    overflow: hidden;
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 3px;
+      background-image: var(--bar, linear-gradient(90deg, var(--violet), var(--rose)));
+    }
+}
+
+@keyframes shimmer {
+    to { background-position: 300% 0; }
+}
+@keyframes drift {
+    0% { transform: translateY(0) rotate(0); opacity: 0; }
+    10% { opacity: 0.9; }
+    100% { transform: translateY(-340px) rotate(180deg); opacity: 0; }
+}
+@keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+@keyframes pulse-soft {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 /*
  * Script-specific font stacks → font-cuneiform, font-egyptian, font-hebrew … utilities.
  * The --font-*-web properties are set on <html> by apps/web from its self-hosted fonts
@@ -155,4 +369,8 @@
     --font-ogham: var(--font-ogham-web, "Noto Sans Ogham"), "Segoe UI Historic", sans-serif;
     --font-hebrew: var(--font-hebrew-web, "Noto Serif Hebrew"), "SBL Hebrew", "Ezra SIL", "Times New Roman", serif;
     --font-greek: var(--font-greek-web, "Noto Serif"), "Gentium Plus", "Palatino Linotype", "Times New Roman", serif;
+    --font-devanagari: "Noto Serif Devanagari", "Kohinoor Devanagari", "Devanagari Sangam MN", "Nirmala UI", serif;
+    --font-armenian: "Noto Serif Armenian", "Mshtakan", "Sylfaen", serif;
+    --font-early-cyrillic: "Monomakh Unicode", "Ponomar Unicode", "Noto Serif", "Segoe UI Historic", serif;
+    --font-ethiopic: "Noto Serif Ethiopic", "Kefa", "Abyssinica SIL", "Nyala", serif;
 }

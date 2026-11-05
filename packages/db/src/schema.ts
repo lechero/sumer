@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm"
+import { relations, sql, type SQL } from "drizzle-orm"
 import {
   type AnyPgColumn,
   boolean,
@@ -93,6 +93,17 @@ export const sources = pgTable("sources", {
   license: text("license"),
   citation: text("citation"),
 })
+
+/**
+ * An entry's gloss split into its meanings, parentheticals and leading articles dropped:
+ * "to like, to love (someone)" → {to like, to love}; "a house, the home" → {house, home}.
+ * Indexed (GIN, `entries_gloss_terms_idx` in migration 0004, written by hand because drizzle-kit
+ * cannot generate expression indexes), so entries sharing a meaning — synonyms in one language,
+ * equivalents across languages — are found without scanning; queries must use this same expression.
+ */
+export function glossTerms(gloss: SQL | AnyPgColumn): SQL {
+  return sql`regexp_split_to_array(regexp_replace(btrim(regexp_replace(lower(${gloss}), '\\s*\\([^)]*\\)', '', 'g')), '(^|[;,])\\s*(?:a|an|the)\\s+', '\\1', 'g'), '\\s*[;,]\\s*')`
+}
 
 export const entries = pgTable(
   "entries",

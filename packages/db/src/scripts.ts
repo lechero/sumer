@@ -126,6 +126,19 @@ export const SCRIPTS = [
     sortOrder: 46,
   },
   {
+    id: "ethiopic",
+    name: "Ge'ez (Ethiopic)",
+    iso15924: "Ethi",
+    kind: "abugida",
+    direction: "ltr",
+    period: "c. 4th century CE – present",
+    region: "Aksum (Ethiopia and Eritrea)",
+    description:
+      "Grown out of the Old South Arabian consonants at Aksum; under King Ezana vowels were added as marks on each letter, making every sign a syllable in seven orders (bä bu bi ba be bə bo).",
+    unicodeRange: "U+1200–137F",
+    sortOrder: 47,
+  },
+  {
     id: "old-persian",
     name: "Old Persian cuneiform",
     iso15924: "Xpeo",
@@ -137,6 +150,19 @@ export const SCRIPTS = [
       "A simplified cuneiform created for the Achaemenid kings' inscriptions (Behistun): 36 phonetic signs, a few logograms, numerals and a word divider.",
     unicodeRange: "U+103A0–103DF",
     sortOrder: 50,
+  },
+  {
+    id: "devanagari",
+    name: "Devanagari",
+    iso15924: "Deva",
+    kind: "abugida",
+    direction: "ltr",
+    period: "c. 7th century CE – present (from Brahmi)",
+    region: "Northern India",
+    description:
+      "The usual script of Sanskrit today: each consonant carries an inherent a, changed by vowel signs or silenced by the virama, and consonants without a vowel join into conjuncts (स्कृ = s + k + ṛ).",
+    unicodeRange: "U+0900–097F",
+    sortOrder: 52,
   },
   {
     id: "anatolian-hieroglyphs",
@@ -226,6 +252,32 @@ export const SCRIPTS = [
     description: "The Greek alphabet plus six or seven letters from Demotic, used for the last stage of the Egyptian language.",
     unicodeRange: "U+2C80–2CFF, U+03E2–03EF",
     sortOrder: 75,
+  },
+  {
+    id: "armenian",
+    name: "Armenian",
+    iso15924: "Armn",
+    kind: "alphabet",
+    direction: "ltr",
+    period: "405 CE – present",
+    region: "Armenia",
+    description:
+      "Devised by Mesrop Mashtots for the Bible translation into Classical Armenian (grabar): 36 letters, later 38, each also a number.",
+    unicodeRange: "U+0530–058F",
+    sortOrder: 77,
+  },
+  {
+    id: "early-cyrillic",
+    name: "Early Cyrillic",
+    iso15924: "Cyrs",
+    kind: "alphabet",
+    direction: "ltr",
+    period: "c. 900 CE – 18th century",
+    region: "The First Bulgarian Empire, then Rus' and Serbia",
+    description:
+      "The Greek uncial alphabet with letters for Slavic sounds (ж ш ц ч, the jers ъ ь, the yuses ѧ ѫ and yat ѣ), used for Old Church Slavonic alongside the older Glagolitic.",
+    unicodeRange: "U+0400–04FF, U+A640–A69F",
+    sortOrder: 78,
   },
   {
     id: "gothic",

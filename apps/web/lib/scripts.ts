@@ -24,6 +24,10 @@ export const ISO_FONT_CLASS: Record<string, string> = {
   Ogam: "font-ogham",
   Hebr: "font-hebrew",
   Grek: "font-greek",
+  Deva: "font-devanagari",
+  Armn: "font-armenian",
+  Cyrs: "font-early-cyrillic",
+  Ethi: "font-ethiopic",
 }
 
 /** Font utility per sign-browser script id (`scripts.id`). */
@@ -48,6 +52,10 @@ const SCRIPT_FONT_CLASS: Record<string, string> = {
   gothic: "font-gothic",
   runic: "font-runic",
   ogham: "font-ogham",
+  devanagari: "font-devanagari",
+  armenian: "font-armenian",
+  "early-cyrillic": "font-early-cyrillic",
+  ethiopic: "font-ethiopic",
 }
 
 export function scriptFontClass(script: string): string {

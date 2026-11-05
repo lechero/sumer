@@ -3,7 +3,7 @@ import { and, asc, count, eq, getTableColumns, ilike, inArray, isNotNull, or, sq
 import type { Database } from "./client"
 import { cuneiformGlyphs, isFullyEncoded, isHieroglyphCodePoint, parseSignName, usesExtendedCodePoints } from "./glyphs"
 import { normalizeForSearch } from "./normalize"
-import { entries, entryComponents, languages, scripts, senses, signReadings, signs, type EntryKind } from "./schema"
+import { entries, entryComponents, entryRelations, languages, scripts, senses, signReadings, signs, type EntryKind } from "./schema"
 
 function escapeLike(s: string): string {
   return s.replace(/[\\%_]/g, (c) => `\\${c}`)
@@ -26,6 +26,18 @@ export type LanguageWithCounts = Awaited<ReturnType<typeof listLanguages>>[numbe
 
 export async function getLanguage(db: Database, id: string) {
   return db.query.languages.findFirst({ where: eq(languages.id, id) })
+}
+
+/** A language's words and word parts. */
+export async function countLanguageEntries(db: Database, id: string) {
+  const [row] = await db
+    .select({
+      words: sql<number>`count(*) filter (where ${entries.kind} = 'word')`.mapWith(Number),
+      parts: sql<number>`count(*) filter (where ${entries.kind} = 'part')`.mapWith(Number),
+    })
+    .from(entries)
+    .where(eq(entries.languageId, id))
+  return row ?? { words: 0, parts: 0 }
 }
 
 export type EntryListFilter = {
@@ -112,6 +124,16 @@ export async function listEntries(db: Database, f: EntryListFilter = {}) {
 
 export type EntryListItem = Awaited<ReturnType<typeof listEntries>>["rows"][number]
 
+/** How many entries match the filter in each language (the filter's own language is ignored). */
+export async function countEntriesByLanguage(db: Database, f: Omit<EntryListFilter, "languageId" | "limit" | "offset">) {
+  const rows = await db
+    .select({ languageId: entries.languageId, total: count() })
+    .from(entries)
+    .where(entryFilter(f))
+    .groupBy(entries.languageId)
+  return new Map(rows.map((r) => [r.languageId, r.total]))
+}
+
 export async function getEntryById(db: Database, id: string) {
   return db.query.entries.findFirst({
     where: eq(entries.id, id),
@@ -138,9 +160,11 @@ export async function countEntries(db: Database) {
       total: count(),
       words: sql<number>`count(*) filter (where ${entries.kind} = 'word')`.mapWith(Number),
       parts: sql<number>`count(*) filter (where ${entries.kind} = 'part')`.mapWith(Number),
+      relations: sql<number>`(select count(*) from ${entryRelations})`.mapWith(Number),
+      sources: sql<number>`count(distinct ${entries.sourceId})`.mapWith(Number),
     })
     .from(entries)
-  return row ?? { total: 0, words: 0, parts: 0 }
+  return row ?? { total: 0, words: 0, parts: 0, relations: 0, sources: 0 }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
